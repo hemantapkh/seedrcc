@@ -1,1 +1,3 @@
-/SeedrCC
+.vscode
+*.pyc
+__pycache__
