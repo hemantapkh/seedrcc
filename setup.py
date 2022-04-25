@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     readme = fh.read()
 
 setuptools.setup(
-    name="seedrcc", 
+    name="seedrcc",
     version="0.0.1",
     author="Hemanta Pokharel",
     author_email="hemantapkh@yahoo.com",
