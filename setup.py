@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Hemanta Pokharel",
     author_email="hemantapkh@yahoo.com",
-    description="Unofficial Python API Seedr.cc",
+    description="Python API wrapper of seedr.cc",
     long_description=readme,
     long_description_content_type="text/markdown",
     install_requires=["requests"],
