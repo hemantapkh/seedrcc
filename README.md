@@ -5,8 +5,8 @@
 <h2 align='center'>Python API Wrapper of Seedr.cc</h2>
 
 ## Table of Contents
-- [Installation](#⚒️-installation)
-- [Start Guide](#📝-start-guide)
+- [Installation](#installation)
+- [Start Guide](#start-guide)
     - [Getting Token](#getting-token)
         - [Logging with Email and Password](#logging-with-email-and-password)
         - [Authorizing with device code](#authorizing-with-device-code)
@@ -17,12 +17,12 @@
             - [Callback function](#callback-function)
                 - [Function with single argument](#callback-function-with-single-argument)
                 - [Function with multiple arguments](#callback-function-with-multiple-arguments)
-- [Detailed Documentation](#📖-documentation)
-- [Contributing](#🤝-contributing)
-- [Projects using this API](#✨-projects-using-this-api)
-- [License](#👮‍♀️-license)
+- [Detailed Documentation](#documentation)
+- [Contributing](#contributing)
+- [Projects using this API](#projects-using-this-api)
+- [License](#license)
 
-## ⚒️ Installation
+##  Installation
 - Install via [PyPi](https://www.pypi.org/project/seedrcc)
     ```bash
     pip install seedrcc
@@ -33,7 +33,7 @@
     git clone https://github.com/hemantapkh/seedrcc && cd seedrcc && python setup.py sdist && pip install dist/*
     ```
 
-## 📝 Start guide
+## Start guide
 
 
 ### Getting Token
@@ -147,7 +147,7 @@ def afterRefresh(token):
     with open('token.txt', 'w') as f:
         f.write(token)
 
-account = Seedr(token='token', autoRefresh=True, afterRefresh=afterRefresh)
+account = Seedr(token='token', autoRefresh=True, callbackFunc=afterRefresh)
 ```
 
 #### Callback function with multiple arguments
@@ -163,15 +163,15 @@ def afterRefresh(token, userId):
     print(f'Token of the user {userId} is updated.')
 
 # Creating a Seedr object for user 12345
-account = Seedr(token='token', autoRefresh=True, autoRefresh=lambda token: afterRefresh(token, userId='12345'))
+account = Seedr(token='token', autoRefresh=True, callbackFunc=lambda token: afterRefresh(token, userId='12345'))
 ```
 
-## 📖 Documentation
+## Documentation
 
 The documentation of seedrcc is available [here](https://seedrcc.readthedocs.org/en/latest/).
 
 
-## 🤝 Contributing
+## Contributing
 
 Any contributions you make are **greatly appreciated**.
 
@@ -184,13 +184,13 @@ Any contributions you make are **greatly appreciated**.
 
 *Thanks to every [contributors](https://github.com/hemantapkh/1337x/graphs/contributors) who have contributed in this project.*
 
-## ✨ Projects using this API
+## Projects using this API
 
 * Torrent Seedr - Telegram bot to download torrents ([Source code](https://github.com/hemantapkh/torrentseedr), [Link](https://t.me/torrentseedrbot)).
 
 Want to list your project here? Just make a pull request.
 
-## 👮‍♀️ License
+## License
 
 Distributed under the MIT License. See [LICENSE](https://github.com/hemantapkh/seedrcc/blob/main/LICENSE) for more information.
 
