@@ -1,1 +1,0 @@
-.. include:: docs/installation.rst
