@@ -19,11 +19,11 @@ class Login():
     """This class contains the methods to generate a login token
 
     Args:
-        email (str, optional): Email address of seedr account
-        password (str, optional): Password of seedr account
+        username (str, optional): Username of the account
+        password (str, optional): Password of the account
 
     Example:
-        Logging with email and password
+        Logging with username and password
 
         >>> seedr = Login('foo@foo.com', 'password')
 
@@ -32,14 +32,14 @@ class Login():
 
         >>> seedr = Login()
     """
-    def __init__(self, email=None, password=None):
-        self.email = email
-        self.password = password
+    def __init__(self, username=None, password=None):
+        self._username = username
+        self._password = password
         self.token = None
 
     def getDeviceCode(self):
         """
-        Generate device and user code
+        Generate a device and user code
 
         Example:
             >>> response = seedr.getDeviceCode()
@@ -59,7 +59,7 @@ class Login():
                 getDeviceCode() method.
 
         Example:
-            Authorizing with email and password
+            Authorizing with username and password
 
             >>> response = seedr.authorize()
             >>> print(response)
@@ -88,15 +88,15 @@ class Login():
 
             response = requests.get(url, params=params).json()
 
-        elif self.email and self.password:
+        elif self._username and self._password:
             url = 'https://www.seedr.cc/oauth_test/token.php'
 
             data = {
                 'grant_type': 'password',
                 'client_id': 'seedr_chrome',
                 'type': 'login',
-                'username': self.email,
-                'password': self.password
+                'username': self._username,
+                'password': self._password
             }
 
             response = requests.post(url, data=data).json()
