@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://i.pinimg.com/originals/50/90/de/5090de031ef49e2b7beedab9b40ae283.png" align="center" height=205 alt="1337x" />
+<img src="docs/images/seedrcc.png" align="center" height=205 alt="1337x" />
 </p>
 
 <h2 align='center'>Python API Wrapper of Seedr.cc</h2>
@@ -39,7 +39,7 @@
 
 ### Getting Token
 
-There are two methods to get the account token. You can login with email/password or by authorizing with device code (Recommended). 
+There are two methods to get the account token. You can login with username/password or by authorizing with device code (Recommended). 
 
 
 #### Logging with Username and Password
