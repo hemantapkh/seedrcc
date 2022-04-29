@@ -14,6 +14,7 @@ setuptools.setup(
     install_requires=["requests"],
     url="https://github.com/hemantapkh/seedrcc",
     project_urls={
+        "Documentation": "https://seedrcc.readthedocs.io/en/latest/",
         "Issue tracker": "https://github.com/hemantapkh/seedrcc/issues",
       },
     packages=setuptools.find_packages(),

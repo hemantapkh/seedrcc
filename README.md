@@ -59,7 +59,7 @@ Seedr don't provide an [API](https://www.seedr.cc/docs/api/rest/v1/) to the free
 
 After analyzing the requests sent by the seedr site (old version), I found the seedr-site API (which needs captcha) are quiet similar to that of seedr-chrome and seedr-kode API. So, I just predicted the other endpoints.
 
-``This API works for all users since it uses the seedr-chrome and seedr-kodi API.``
+**This API works for all users since it uses the seedr-chrome and seedr-kodi API.**
 
 ## Start guide
 
