@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://raw.githubusercontent.com/hemantapkh/seedrcc/master/docs/images/seedrcc.png" align="center" height=250 alt="1337x" />
+<img src="https://raw.githubusercontent.com/hemantapkh/seedrcc/master/docs/images/seedrcc.png" align="center" height=250 alt="seedrpy logo" />
 </p>
 
 <h2 align='center'>Python API Wrapper of Seedr.cc</h2>
@@ -213,7 +213,7 @@ Any contributions you make are **greatly appreciated**.
 5. Open a Pull Request
 
 
-*Thanks to every [contributors](https://github.com/hemantapkh/1337x/graphs/contributors) who have contributed in this project.*
+*Thanks to every [contributors](https://github.com/hemantapkh/seedrcc/graphs/contributors) who have contributed in this project.*
 
 ## Projects using this API
 
