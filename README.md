@@ -11,7 +11,9 @@
 <a href="https://pepy.tech/project/seedrcc">
 <img src='https://pepy.tech/badge/seedrcc'>
 </a>
+<a href="https://tinyurl.com/visitors-stats">
 <img src='https://visitor-badge.laobi.icu/badge?page_id=hemantapkh.seedrcc'>
+</a>
 <a href="https://github.com/hemantapkh/seedrcc/stargazers">
 <img src="https://img.shields.io/github/stars/hemantapkh/seedrcc" alt="Stars"/>
 </a>
@@ -23,6 +25,7 @@
 
 ## Table of Contents
 - [Installation](#installation)
+- [How I got the API endpoints?](#how-i-got-the-api-endpoints)
 - [Start Guide](#start-guide)
     - [Getting Token](#getting-token)
         - [Logging with Username and Password](#logging-with-username-and-password)
@@ -39,7 +42,7 @@
 - [Projects using this API](#projects-using-this-api)
 - [License](#license)
 
-##  Installation
+## Installation
 - Install via [PyPi](https://www.pypi.org/project/seedrcc)
     ```bash
     pip install seedrcc
@@ -49,6 +52,14 @@
     ```bash
     git clone https://github.com/hemantapkh/seedrcc && cd seedrcc && python setup.py sdist && pip install dist/*
     ```
+
+## How I got the API endpoints
+
+Seedr don't provide an [API](https://www.seedr.cc/docs/api/rest/v1/) to the freemium users. However, Seedr has a [chrome](https://github.com/DannyZB/seedr_chrome) and [kodi](https://github.com/DannyZB/seedr_chrome) extension that works for all users. Some of the endpoints (very few) are extracted from these extensions. 
+
+After analyzing the requests sent by the seedr site (old version), I found the seedr-site API (which needs captcha) are quiet similar to that of seedr-chrome and seedr-kode API. So, I just predicted the other endpoints.
+
+``This API works for all users since it uses the seedr-chrome and seedr-kodi API.``
 
 ## Start guide
 

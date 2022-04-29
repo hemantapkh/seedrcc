@@ -56,7 +56,7 @@ class Login():
 
         Args:
             deviceCode (str, optional): Device code from
-                getDeviceCode() method.
+                getDeviceCode() method
 
         Example:
             Authorizing with username and password
