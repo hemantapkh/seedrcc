@@ -1,8 +1,25 @@
 <p align="center">
-<img src="docs/images/seedrcc.png" align="center" height=205 alt="1337x" />
+<img src="https://raw.githubusercontent.com/hemantapkh/seedrcc/master/docs/images/seedrcc.png" align="center" height=250 alt="1337x" />
 </p>
 
 <h2 align='center'>Python API Wrapper of Seedr.cc</h2>
+
+<p align="center">
+<a href="https://pypi.org/project/seedrcc">
+<img src='https://img.shields.io/pypi/v/seedrcc.svg'>
+</a>
+<a href="https://pepy.tech/project/seedrcc">
+<img src='https://pepy.tech/badge/seedrcc'>
+</a>
+<img src='https://visitor-badge.laobi.icu/badge?page_id=hemantapkh.seedrcc'>
+<a href="https://github.com/hemantapkh/seedrcc/stargazers">
+<img src="https://img.shields.io/github/stars/hemantapkh/seedrcc" alt="Stars"/>
+</a>
+<a href="https://github.com/hemantapkh/seedrcc/issues">
+<img src="https://img.shields.io/github/issues/hemantapkh/seedrcc" alt="Issues"/>
+</a>
+<br>
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png">
 
 ## Table of Contents
 - [Installation](#installation)
