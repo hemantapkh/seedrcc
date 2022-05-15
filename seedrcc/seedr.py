@@ -78,6 +78,15 @@ class Seedr():
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             response = func(self, *args, **kwargs)
+            try:
+                response = response.json()
+
+            except requests.exceptions.JSONDecodeError:
+                return {
+                    'result': False,
+                    'code': 400,
+                    'error': response.text
+                }
 
             if 'error' in response and response['error'] == 'expired_token':
                 if self._auto_refresh:
@@ -86,7 +95,7 @@ class Seedr():
                     if 'error' in refreshResponse:
                         return refreshResponse
 
-                    response = func(self, *args, **kwargs)
+                    response = func(self, *args, **kwargs).json()
 
             return response
 
@@ -144,7 +153,7 @@ class Seedr():
         }
 
         response = requests.get(self._base_url, params=params)
-        return response.json()
+        return response
 
     @__autoRefresh
     def getMemoryBandwidth(self):
@@ -161,7 +170,7 @@ class Seedr():
         }
 
         response = requests.get(self._base_url, params=params)
-        return response.json()
+        return response
 
     @__autoRefresh
     def addTorrent(self, magnetLink=None, wishlistId=None, folderId='-1'):
@@ -204,7 +213,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, data=data, params=params)
-        return response.json()
+        return response
 
     @__autoRefresh
     def scanPage(self, url):
@@ -231,7 +240,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def createArchive(self, folderId):
@@ -255,7 +264,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def fetchFile(self, fileId):
@@ -279,7 +288,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def listContents(self, folderId=0, contentType='folder'):
@@ -316,7 +325,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def renameFile(self, fileId, renameTo):
@@ -342,7 +351,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def renameFolder(self, folderId, renameTo):
@@ -368,7 +377,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def deleteFile(self, fileId):
@@ -392,7 +401,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def deleteFolder(self, folderId):
@@ -416,7 +425,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def deleteWishlist(self, wishlistId):
@@ -440,7 +449,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def deleteTorrent(self, torrentId):
@@ -465,7 +474,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def addFolder(self, name):
@@ -490,7 +499,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def searchFiles(self, query):
@@ -515,7 +524,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def changeName(self, name, password):
@@ -543,7 +552,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def changePassword(self, oldPassword, newPassword):
@@ -572,7 +581,7 @@ class Seedr():
         }
 
         response = requests.post(self._base_url, params=params, data=data)
-        return response.json()
+        return response
 
     @__autoRefresh
     def getDevices(self):
@@ -589,4 +598,4 @@ class Seedr():
         }
 
         response = requests.get(self._base_url, params=params)
-        return response.json()
+        return response
