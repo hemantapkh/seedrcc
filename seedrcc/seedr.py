@@ -174,9 +174,15 @@ class Seedr():
                 Defaults to '-1'.
 
         Example:
-            Adding torrent to the root folder
+            Adding torrent to the root folder using magnet link
 
             >>> response = account.addTorrent(magnetLink='magnet:?xt=')
+            >>> print(response)
+
+        Example:
+            Adding torrent using wishlistId
+
+            >>> response = account.addTorrent(wishlistId='12345')
             >>> print(response)
 
         Example:
@@ -407,6 +413,30 @@ class Seedr():
 
         data = {
             'delete_arr': f'[{{"type":"folder","id":{folderId}}}]'
+        }
+
+        response = requests.post(self._base_url, params=params, data=data)
+        return response.json()
+
+    @__autoRefresh
+    def deleteWishlist(self, wishlistId):
+        """
+        Delete an item from the wishlist
+
+        Args:
+            wishlistId (str): The wishlistId of item to delete
+
+        Example:
+            >>> response = account.deleteWishlist(wishlistId='12345')
+            >>> print(response)
+        """
+        params = {
+            'access_token': self._access_token,
+            'func': 'remove_wishlist'
+        }
+
+        data = {
+            'id': wishlistId
         }
 
         response = requests.post(self._base_url, params=params, data=data)
