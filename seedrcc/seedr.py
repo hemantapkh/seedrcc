@@ -164,7 +164,7 @@ class Seedr():
         return response.json()
 
     @__autoRefresh
-    def addTorrent(self, magnetLink, folderId='-1'):
+    def addTorrent(self, magnetLink=None, wishlistId=None, folderId='-1'):
         """
         Add a torrent to the seedr account for downloading
 
@@ -193,6 +193,7 @@ class Seedr():
 
         data = {
             'torrent_magnet': magnetLink,
+            'wishlist_id': wishlistId,
             'folder_id': folderId
         }
 
