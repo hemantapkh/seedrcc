@@ -12,32 +12,19 @@ class Seedr():
 
     Args:
         token (str): Token of the seedr account
-        autoRefresh (bool, optional): If True, the token will be refreshed
-            automatically when it expires
-        callbackFunc (function, optional): Callback function to be called
+        callbackFunc (function, optional): Callback function to call
             after the token is refreshed
 
     Example:
-        Token will not be refreshed automatically. You need to manually
-        refresh the token using the refreshToken method and store the updated
-        token for later use.
-
         >>> seedr = Seedr(token='token')
 
     Example:
-        Token will be refreshed automatically when it expires. It is
-        recommended to set a callback function to handle the refreshed token.
-
-        >>> seedr = Seedr(token='token', autoRefresh=True)
-
-    Example:
-        Token will be refreshed automatically when it expires and the callback
-        function will be called after the token is refreshed.
+        The callback function will be called after the token is refreshed.
 
             >>> def callbackFunc(token):
             >>>     print(f'Token refreshed: {token}')
 
-            >>> seedr = Seedr(token='token', autoRefresh=True, callbackFunc=callbackFunc)
+            >>> seedr = Seedr(token='token', callbackFunc=callbackFunc)
 
         If the callback function has more than one argument, pass the function
         as a lambda function.
@@ -45,12 +32,11 @@ class Seedr():
             >>> def callbackFunc(token, userId):
             >>>     print(f'Token refreshed of {userId}: {token}')
 
-            >>> seedr = Seedr(token='token', autoRefresh=True, callbackFunc=lambda token: callbackFunc(token, '1234'))
+            >>> seedr = Seedr(token='token', callbackFunc=lambda token: callbackFunc(token, '1234'))
     """
-    def __init__(self, token, autoRefresh=False, callbackFunc=None):
+    def __init__(self, token, callbackFunc=None):
         self.token = token
         token = eval(b64decode(token))
-        self._auto_refresh = autoRefresh
         self._callback_func = callbackFunc
 
         self._base_url = 'https://www.seedr.cc/oauth_test/resource.php'
@@ -89,13 +75,12 @@ class Seedr():
                 }
 
             if 'error' in response and response['error'] == 'expired_token':
-                if self._auto_refresh:
-                    refreshResponse = self.refreshToken()
+                refreshResponse = self.refreshToken()
 
-                    if 'error' in refreshResponse:
-                        return refreshResponse
+                if 'error' in refreshResponse:
+                    return refreshResponse
 
-                    response = func(self, *args, **kwargs).json()
+                response = func(self, *args, **kwargs).json()
 
             return response
 
@@ -106,10 +91,13 @@ class Seedr():
         Refresh the expired token
 
         Note:
-            This method is called automatically if the autoRefresh is
-            set to True. After the token is refreshed, the callbackFunc
-            will be called and the instance variable 'token' is updated
-            with the new token.
+            This method is called automatically after the token is refreshed by
+            the module. However, you can call it manually if you want to
+            refresh the token.
+
+        Example:
+            >>> response = account.refreshToken()
+            >>> print(account.token)
         '''
 
         if self._refresh_token:

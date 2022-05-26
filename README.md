@@ -106,6 +106,8 @@ print(response)
 seedr.token
 ```
 
+**✏️ Note: You must use the token from the instance variable ‘token’ instead of the ‘access_token’ or ‘refresh_token’ from the response.**
+
 ----
 
 ### Basic Examples
@@ -141,7 +143,7 @@ The access token may expire after certain time and need to be refreshed. However
 
 You can set a callback function which will be called automatically each time the token is refreshed. You can use such function to deal with the refreshed token.
 
-✏️ Note: The callback function must have at least one parameter. The first parameter of the callback function will be the updated token.
+**✏️ Note: The callback function must have at least one parameter. The first parameter of the callback function will be the updated token.**
 
 #### Callback function with single argument
 
