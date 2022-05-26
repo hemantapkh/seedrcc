@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="seedrcc",
-    version="0.0.1",
+    version="1.0.0",
     author="Hemanta Pokharel",
     author_email="hemantapkh@yahoo.com",
-    description="Python API wrapper of seedr.cc",
+    description="Complete Python API wrapper of seedr.cc",
     long_description=readme,
     long_description_content_type="text/markdown",
     install_requires=["requests"],
@@ -19,7 +19,7 @@ setuptools.setup(
       },
     packages=setuptools.find_packages(),
     classifiers=[
-        "Development Status :: 1 - Planning",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
