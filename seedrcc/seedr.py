@@ -2,6 +2,8 @@ import requests
 import functools
 from base64 import b64decode
 
+import validators
+
 from seedrcc.login import Login
 from seedrcc.login import createToken
 
@@ -161,12 +163,14 @@ class Seedr():
         return response
 
     @__autoRefresh
-    def addTorrent(self, magnetLink=None, wishlistId=None, folderId='-1'):
+    def addTorrent(self, magnetLink=None, torrentFile=None, wishlistId=None, folderId='-1'):
         """
         Add a torrent to the seedr account for downloading
 
         Args:
-            magnetLink (str): The magnet link of the torrent
+            magnetLink (str, optional): The magnet link of the torrent
+            torrentFile (str, optional): Remote or local path of the
+                torrent file
             folderId (str, optional): The folder id to add the torrent to.
                 Defaults to '-1'.
 
@@ -174,6 +178,18 @@ class Seedr():
             Adding torrent to the root folder using magnet link
 
             >>> response = account.addTorrent(magnetLink='magnet:?xt=')
+            >>> print(response)
+
+        Example:
+            Adding torrent from local torrent file
+
+            >>> response = account.addTorrent(torrentFile='/path/to/torrent')
+            >>> print(response)
+
+        Example:
+            Adding torrent from remote torrent file
+
+            >>> response = account.addTorrent(torrentFile='https://api.telegram.org/file/bot<token>/<file_path>')
             >>> print(response)
 
         Example:
@@ -200,7 +216,22 @@ class Seedr():
             'folder_id': folderId
         }
 
-        response = requests.post(self._base_url, data=data, params=params)
+        files = {}
+
+        if torrentFile:
+            if validators.url(torrentFile):
+                file = requests.get(torrentFile).content
+
+                files = {
+                    'torrent_file': file
+                }
+
+            else:
+                files = {
+                    'torrent_file': open(torrentFile, 'rb').read(),
+                }
+
+        response = requests.post(self._base_url, data=data, params=params, files=files)
         return response
 
     @__autoRefresh

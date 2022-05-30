@@ -11,7 +11,7 @@ setuptools.setup(
     description="Complete Python API wrapper of seedr.cc",
     long_description=readme,
     long_description_content_type="text/markdown",
-    install_requires=["requests"],
+    install_requires=["requests", "validators"],
     url="https://github.com/hemantapkh/seedrcc",
     project_urls={
         "Documentation": "https://seedrcc.readthedocs.io/en/latest/",
