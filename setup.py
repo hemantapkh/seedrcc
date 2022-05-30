@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="seedrcc",
-    version="1.0.0",
+    version="1.0.1",
     author="Hemanta Pokharel",
     author_email="hemantapkh@yahoo.com",
     description="Complete Python API wrapper of seedr.cc",
