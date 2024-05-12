@@ -17,3 +17,6 @@ Seedr
 .. automodule:: seedrcc.seedr
    :members:
    :show-inheritance:
+
+   .. autosummary::
+      seedrcc.seedr
