@@ -1,4 +1,4 @@
-Detailled Documentation
+Detailed Documentation
 =======================
 
 Login
