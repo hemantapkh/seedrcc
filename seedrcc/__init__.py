@@ -1,2 +1,4 @@
-from seedrcc.login import Login
-from seedrcc.seedr import Seedr
+from .exceptions import APIError, AuthenticationError, SeedrError
+from .seedr import Seedr
+
+__all__ = ["Seedr", "SeedrError", "APIError", "AuthenticationError"]
