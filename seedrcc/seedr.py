@@ -1,620 +1,462 @@
-import requests
-import functools
-from base64 import b64decode
+from typing import Any, Callable, Dict, Optional, Type
 
-import validators
+import httpx
 
-from seedrcc.login import Login
-from seedrcc.login import createToken
+from . import _constants
+from ._login import _Login
+from .exceptions import APIError, AuthenticationError
 
 
-class Seedr():
+class Seedr:
     """
-    This class contains the method to access the seedr account
-
-    Args:
-        token (str): Token of the seedr account
-        callbackFunc (function, optional): Callback function to call
-            after the token is refreshed
-
-    Example:
-        >>> seedr = Seedr(token='token')
-
-    Example:
-        The callback function will be called after the token is refreshed.
-
-            >>> def callbackFunc(token):
-            >>>     print(f'Token refreshed: {token}')
-
-            >>> seedr = Seedr(token='token', callbackFunc=callbackFunc)
-
-        If the callback function has more than one argument, pass the function
-        as a lambda function.
-
-            >>> def callbackFunc(token, userId):
-            >>>     print(f'Token refreshed of {userId}: {token}')
-
-            >>> seedr = Seedr(token='token', callbackFunc=lambda token: callbackFunc(token, '1234'))
+    The main synchronous client for interacting with the Seedr API.
+    It is recommended to use one of the factory methods to create an instance.
+    e.g., `Seedr.from_password(...)`
     """
-    def __init__(self, token, callbackFunc=None):
-        self.token = token
-        token = eval(b64decode(token))
-        self._callback_func = callbackFunc
 
-        self._base_url = 'https://www.seedr.cc/oauth_test/resource.php'
-        self._access_token = token['access_token']
-        self._refresh_token = token['refresh_token'] if 'refresh_token' in token else None
-        self._device_code = token['device_code'] if 'device_code' in token else None
+    _access_token: str
+    _refresh_token: Optional[str]
+    _device_code: Optional[str]
+    _on_token_refresh: Optional[Callable[[Dict[str, Any]], None]]
+    _client: httpx.Client
 
-    def testToken(self):
+    def __init__(
+        self,
+        access_token: str,
+        refresh_token: Optional[str] = None,
+        device_code: Optional[str] = None,
+        on_token_refresh: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
         """
-        Test the validity of the token
-
-        Example:
-            >>> response = account.testToken()
-            >>> print(response)
-        """
-        params = {
-            'access_token': self._access_token,
-            'func': 'test'
-        }
-
-        response = requests.get(self._base_url, params=params)
-        return response.json()
-
-    def __autoRefresh(func):
-        @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            response = func(self, *args, **kwargs)
-            try:
-                response = response.json()
-
-            except requests.exceptions.JSONDecodeError:
-                return {
-                    'result': False,
-                    'code': 400,
-                    'error': response.text
-                }
-
-            if 'error' in response and response['error'] == 'expired_token':
-                refreshResponse = self.refreshToken()
-
-                if 'error' in refreshResponse:
-                    return refreshResponse
-
-                response = func(self, *args, **kwargs).json()
-
-            return response
-
-        return wrapper
-
-    def refreshToken(self):
-        '''
-        Refresh the expired token
-
-        Note:
-            This method is called automatically after the token is refreshed by
-            the module. However, you can call it manually if you want to
-            refresh the token.
-
-        Example:
-            >>> response = account.refreshToken()
-            >>> print(account.token)
-        '''
-
-        if self._refresh_token:
-            url = 'https://www.seedr.cc/oauth_test/token.php'
-
-            data = {
-                "grant_type": "refresh_token",
-                "refresh_token": self._refresh_token,
-                "client_id": "seedr_chrome"
-            }
-
-            response = requests.post(url, data=data).json()
-
-        else:
-            response = Login().authorize(deviceCode=self._device_code)
-
-        if 'access_token' in response:
-            self._access_token = response['access_token']
-
-            self.token = createToken(
-                response, self._refresh_token, self._device_code
-                )
-
-            if self._callback_func:
-                self._callback_func(self.token)
-
-        return response
-
-    @__autoRefresh
-    def getSettings(self):
-        """
-        Get the user settings
-
-        Example:
-            >>> response = account.getSettings()
-            >>> print(response)
-        """
-        params = {
-            'access_token': self._access_token,
-            'func': 'get_settings'
-        }
-
-        response = requests.get(self._base_url, params=params)
-        return response
-
-    @__autoRefresh
-    def getMemoryBandwidth(self):
-        """
-        Get the memory and bandwidth usage
-
-        Example:
-            >>> response = account.getMemoryBandwidth()
-            >>> print(response)
-        """
-        params = {
-            'access_token': self._access_token,
-            'func': 'get_memory_bandwidth'
-        }
-
-        response = requests.get(self._base_url, params=params)
-        return response
-
-    @__autoRefresh
-    def addTorrent(self, magnetLink=None, torrentFile=None, wishlistId=None, folderId='-1'):
-        """
-        Add a torrent to the seedr account for downloading
+        Initializes the client with ready-to-use tokens.
+        For most use cases, prefer using a factory method like `from_password` or `from_refresh_token`.
 
         Args:
-            magnetLink (str, optional): The magnet link of the torrent
-            torrentFile (str, optional): Remote or local path of the
-                torrent file
-            folderId (str, optional): The folder id to add the torrent to.
-                Defaults to '-1'.
+            access_token (str): A valid access token for the Seedr API.
+            refresh_token (str, optional): A refresh token for automatically renewing the session.
+            device_code (str, optional): A device code for renewing the session.
+            on_token_refresh (Callable, optional): A function to call with new token info when the session is refreshed.
+        """
+        self._access_token = access_token
+        self._refresh_token = refresh_token
+        self._device_code = device_code
+        self._on_token_refresh = on_token_refresh
+
+        self._client = httpx.Client()
+
+    @staticmethod
+    def get_device_code() -> Dict[str, Any]:
+        """
+        Step 1 of the device flow.
+        Gets the device and user codes required for authorization.
 
         Example:
-            Adding torrent to the root folder using magnet link
+            >>> codes = Seedr.get_device_code()
+            >>> print(f"Go to {codes['verification_url']} and enter {codes['user_code']}")
+        """
+        with _Login() as login_client:
+            return login_client.get_device_code()
 
-            >>> response = account.addTorrent(magnetLink='magnet:?xt=')
-            >>> print(response)
+    @classmethod
+    def from_device_code(cls: Type["Seedr"], device_code: str, **kwargs: Any) -> "Seedr":
+        """
+        Step 2 of the device flow.
+        Creates a new client by authorizing with a device code obtained from `get_device_code`.
+
+        Args:
+            device_code (str): The device code to authorize.
+        """
+        with _Login() as login_client:
+            response = login_client.authorize_device(device_code)
+
+        return cls(
+            access_token=response["access_token"],
+            refresh_token=response.get("refresh_token"),
+            device_code=device_code,
+            **kwargs,
+        )
+
+    @classmethod
+    def from_password(cls: Type["Seedr"], username: str, password: str, **kwargs: Any) -> "Seedr":
+        """
+        Creates a new client by authenticating with a username and password.
+
+        Args:
+            username (str): The user's Seedr username (email).
+            password (str): The user's Seedr password.
+        """
+        with _Login() as login_client:
+            response = login_client.authorize_password(username, password)
+
+        return cls(access_token=response["access_token"], refresh_token=response.get("refresh_token"), **kwargs)
+
+    @classmethod
+    def from_refresh_token(cls: Type["Seedr"], refresh_token: str, **kwargs: Any) -> "Seedr":
+        """
+        Creates a new client by refreshing an existing refresh token.
+
+        Args:
+            refresh_token (str): A valid refresh token.
+        """
+        with _Login() as login_client:
+            response = login_client.refresh_token(refresh_token)
+
+        return cls(access_token=response["access_token"], refresh_token=refresh_token, **kwargs)
+
+    def _request(self, http_method: str, func: str, **kwargs: Any) -> Dict[str, Any]:
+        """
+        A centralized method for making API requests.
+        Handles token refresh automatically.
+        """
+        params = kwargs.pop("params", {})
+        params["access_token"] = self._access_token
+        params["func"] = func
+
+        try:
+            response = self._client.request(http_method, _constants.RESOURCE_URL, params=params, **kwargs)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPStatusError as e:
+            raise APIError(f"API returned status {e.response.status_code}", response=e.response) from e
+        except httpx.RequestError as e:
+            raise APIError(f"Request failed: {e.request.url}") from e
+
+        if isinstance(data, dict) and data.get("error") == "expired_token":
+            self._perform_token_refresh()
+            params["access_token"] = self._access_token
+            response = self._client.request(http_method, _constants.RESOURCE_URL, params=params, **kwargs)
+            response.raise_for_status()
+            data = response.json()
+
+        return data
+
+    def _perform_token_refresh(self) -> None:
+        """Helper method to refresh the token."""
+        try:
+            with _Login() as login_client:
+                if self._refresh_token:
+                    response = login_client.refresh_token(self._refresh_token)
+                elif self._device_code:
+                    response = login_client.authorize_device(self._device_code)
+                else:
+                    # This path should ideally not be reached if called from _request
+                    # but is kept for robustness, especially for manual refresh_token() calls.
+                    raise AuthenticationError("Session expired. No refresh token or device code available.")
+        except APIError as e:
+            raise AuthenticationError("Failed to refresh token. Please re-authenticate manually.") from e
+
+        if "access_token" not in response:
+            raise AuthenticationError("Token refresh failed. The response did not contain a new access token.")
+
+        self._access_token = response["access_token"]
+
+        if self._on_token_refresh:
+            token_data = {
+                "access_token": self._access_token,
+                "refresh_token": self._refresh_token,
+                "device_code": self._device_code,
+            }
+            self._on_token_refresh(token_data)
+
+    def refresh_token(self) -> None:
+        """
+        Manually refreshes the access token.
+
+        This is useful if you want to proactively manage the token's lifecycle
+        instead of waiting for an automatic refresh on an API call.
 
         Example:
-            Adding torrent from local torrent file
+            >>> try:
+            ...     client.refresh_token()
+            ...     print("Token successfully refreshed.")
+            ... except AuthenticationError as e:
+            ...     print(f"Failed to refresh token: {e}")
 
-            >>> response = account.addTorrent(torrentFile='/path/to/torrent')
-            >>> print(response)
+        Raises:
+            AuthenticationError: If the refresh process fails.
+        """
+        self._perform_token_refresh()
 
-        Example:
-            Adding torrent from remote torrent file
-
-            >>> response = account.addTorrent(torrentFile='https://api.telegram.org/file/bot<token>/<file_path>')
-            >>> print(response)
-
-        Example:
-            Adding torrent using wishlistId
-
-            >>> response = account.addTorrent(wishlistId='12345')
-            >>> print(response)
+    def get_settings(self) -> Dict[str, Any]:
+        """
+        Get the user settings.
 
         Example:
-            Adding torrent to a certain folder
-
-            >>> response = account.addTorrent(magnetLink='magnet', folderId='12345')
+            >>> response = client.get_settings()
             >>> print(response)
         """
+        return self._request("get", "get_settings")
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'add_torrent'
-        }
+    def get_memory_bandwidth(self) -> Dict[str, Any]:
+        """
+        Get the memory and bandwidth usage.
 
+        Example:
+            >>> response = client.get_memory_bandwidth()
+            >>> print(response)
+        """
+        return self._request("get", "get_memory_bandwidth")
+
+    def add_torrent(
+        self,
+        magnet_link: Optional[str] = None,
+        torrent_file: Optional[str] = None,
+        wishlist_id: Optional[str] = None,
+        folder_id: str = "-1",
+    ) -> Dict[str, Any]:
+        """
+        Add a torrent to the seedr account for downloading.
+
+        Args:
+            magnet_link (str, optional): The magnet link of the torrent.
+            torrent_file (str, optional): Remote or local path of the torrent file.
+            wishlist_id (str, optional): The ID of a wishlist item to add.
+            folder_id (str, optional): The folder ID to add the torrent to. Defaults to root ('-1').
+
+        Example:
+            >>> response = client.add_torrent(magnet_link='magnet:?xt=...')
+            >>> print(response)
+        """
         data = {
-            'torrent_magnet': magnetLink,
-            'wishlist_id': wishlistId,
-            'folder_id': folderId
+            "torrent_magnet": magnet_link,
+            "wishlist_id": wishlist_id,
+            "folder_id": folder_id,
         }
-
         files = {}
-
-        if torrentFile:
-            if validators.url(torrentFile):
-                file = requests.get(torrentFile).content
-
-                files = {
-                    'torrent_file': file
-                }
-
+        if torrent_file:
+            # Handle remote URLs
+            if torrent_file.startswith(("http://", "https://")):
+                file_content = httpx.get(torrent_file).content
+                files = {"torrent_file": file_content}
+            # Handle local files more efficiently
             else:
-                files = {
-                    'torrent_file': open(torrentFile, 'rb').read(),
-                }
+                with open(torrent_file, "rb") as f:
+                    files = {"torrent_file": f}
+                    # The request is made outside the `with` block, but the file handle is passed.
+                    # httpx will handle reading the file.
+                    return self._request("post", "add_torrent", data=data, files=files)
 
-        response = requests.post(self._base_url, data=data, params=params, files=files)
-        return response
+        return self._request("post", "add_torrent", data=data, files=files)
 
-    @__autoRefresh
-    def scanPage(self, url):
+    def scan_page(self, url: str) -> Dict[str, Any]:
         """
         Scan a page and return a list of torrents. For example,
         you can pass the torrent link of 1337x.to and it will fetch
         the magnet link from that page.
 
         Args:
-            url (str): The url of the page to scan
+            url (str): The url of the page to scan.
 
         Example:
-            >>> response = account.scanPage(url='https://1337x.to/torrent/1010994')
+            >>> response = client.scan_page(url='https://1337x.to/torrent/1010994')
             >>> print(response)
         """
+        return self._request("post", "scan_page", data={"url": url})
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'scan_page'
-        }
-
-        data = {
-            'url': url
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def createArchive(self, folderId):
+    def create_archive(self, folder_id: str) -> Dict[str, Any]:
         """
-        Create an archive link of a folder
+        Create an archive link of a folder.
 
         Args:
-            folderId (str): The folder id to create the archive of
+            folder_id (str): The folder id to create the archive of.
 
         Example:
-            >>> response = account.createArchive(folderId='12345')
+            >>> response = client.create_archive(folder_id='12345')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'create_empty_archive'
-        }
+        data = {"archive_arr": f'[{{"type":"folder","id":{folder_id}}}]'}
+        return self._request("post", "create_empty_archive", data=data)
 
-        data = {
-            'archive_arr': f'[{{"type":"folder","id":{folderId}}}]'
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def fetchFile(self, fileId):
+    def fetch_file(self, file_id: str) -> Dict[str, Any]:
         """
-        Create a link of a file
+        Create a link of a file.
 
         Args:
-            fileId (string): The file id to fetch
+            file_id (string): The file id to fetch.
 
         Example:
-            >>> response = account.fetchFile(fileId='12345')
+            >>> response = client.fetch_file(file_id='12345')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'fetch_file'
-        }
+        return self._request("post", "fetch_file", data={"folder_file_id": file_id})
 
-        data = {
-            'folder_file_id': fileId
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def listContents(self, folderId=0, contentType='folder'):
+    def list_contents(self, folder_id: str = "0", content_type: str = "folder") -> Dict[str, Any]:
         """
-        List the contents of a folder
+        List the contents of a folder.
 
         Args:
-            folderId (str, optional): The folder id to list the contents of.
-                Defaults to root folder.
-            contentType (str, optional): The type of content to list.
-                Defaults to 'folder'.
+            folder_id (str, optional): The folder id to list the contents of. Defaults to root folder.
+            content_type (str, optional): The type of content to list. Defaults to 'folder'.
 
         Example:
-            list the contents of the root folder
-
-            >>> response = account.listContents()
-            >>> print(response)
-
-        Example:
-            list the contents of the folder with id '12345'
-
-            >>> response = account.listContents(folderId='12345')
+            >>> response = client.list_contents()
             >>> print(response)
         """
+        data = {"content_type": content_type, "content_id": folder_id}
+        return self._request("post", "list_contents", data=data)
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'list_contents'
-        }
-
-        data = {
-            'content_type': contentType,
-            'content_id': folderId
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def renameFile(self, fileId, renameTo):
+    def rename_file(self, file_id: str, rename_to: str) -> Dict[str, Any]:
         """
-        Rename a file
+        Rename a file.
 
         Args:
-            fileId (str): The file id to rename
-            renameTo (str): The new name of the file
+            file_id (str): The file id to rename.
+            rename_to (str): The new name of the file.
 
         Example:
-            >>> response = account.renameFile(fileId='12345', renameTo='newName')
+            >>> response = client.rename_file(file_id='12345', rename_to='newName')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'rename'
-        }
+        data = {"rename_to": rename_to, "file_id": file_id}
+        return self._request("post", "rename", data=data)
 
-        data = {
-            'rename_to': renameTo,
-            'file_id': fileId
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def renameFolder(self, folderId, renameTo):
+    def rename_folder(self, folder_id: str, rename_to: str) -> Dict[str, Any]:
         """
-        Rename a folder
+        Rename a folder.
 
         Args:
-            folderId (str): The folder id to rename
-            renameTo (str): The new name of the folder
+            folder_id (str): The folder id to rename.
+            rename_to (str): The new name of the folder.
 
         Example:
-            >>> response = account.renameFolder(folderId='12345', renameTo='newName')
+            >>> response = client.rename_folder(folder_id='12345', rename_to='newName')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'rename'
-        }
+        data = {"rename_to": rename_to, "folder_id": folder_id}
+        return self._request("post", "rename", data=data)
 
-        data = {
-            'rename_to': renameTo,
-            'folder_id': folderId
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def deleteFile(self, fileId):
+    def delete_file(self, file_id: str) -> Dict[str, Any]:
         """
-        Delete a file
+        Delete a file.
 
         Args:
-            fileId (str): The file id to delete
+            file_id (str): The file id to delete.
 
         Example:
-            >>> response = account.deleteFile(fileId='12345')
+            >>> response = client.delete_file(file_id='12345')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'delete'
-        }
+        data = {"delete_arr": f'[{{"type":"file","id":{file_id}}}]'}
+        return self._request("post", "delete", data=data)
 
-        data = {
-            'delete_arr': f'[{{"type":"file","id":{fileId}}}]'
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def deleteFolder(self, folderId):
+    def delete_folder(self, folder_id: str) -> Dict[str, Any]:
         """
-        Delete a folder
+        Delete a folder.
 
         Args:
-            folderId (str): The folder id to delete
+            folder_id (str): The folder id to delete.
 
         Example:
-            >>> response = account.deleteFolder(folderId='12345')
+            >>> response = client.delete_folder(folder_id='12345')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'delete'
-        }
+        data = {"delete_arr": f'[{{"type":"folder","id":{folder_id}}}]'}
+        return self._request("post", "delete", data=data)
 
-        data = {
-            'delete_arr': f'[{{"type":"folder","id":{folderId}}}]'
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def deleteWishlist(self, wishlistId):
+    def delete_wishlist(self, wishlist_id: str) -> Dict[str, Any]:
         """
-        Delete an item from the wishlist
+        Delete an item from the wishlist.
 
         Args:
-            wishlistId (str): The wishlistId of item to delete
+            wishlist_id (str): The wishlistId of item to delete.
 
         Example:
-            >>> response = account.deleteWishlist(wishlistId='12345')
+            >>> response = client.delete_wishlist(wishlist_id='12345')
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'remove_wishlist'
-        }
+        return self._request("post", "remove_wishlist", data={"id": wishlist_id})
 
-        data = {
-            'id': wishlistId
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def deleteTorrent(self, torrentId):
+    def delete_torrent(self, torrent_id: str) -> Dict[str, Any]:
         """
-        Delete an active downloading torrent
+        Delete an active downloading torrent.
 
         Args:
-            torrentId (str): The torrent id to delete
+            torrent_id (str): The torrent id to delete.
 
         Example:
-            >>> response = account.deleteTorrent(torrentId='12345')
+            >>> response = client.delete_torrent(torrent_id='12345')
             >>> print(response)
         """
+        data = {"delete_arr": f'[{{"type":"torrent","id":{torrent_id}}}]'}
+        return self._request("post", "delete", data=data)
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'delete'
-        }
-
-        data = {
-            'delete_arr': f'[{{"type":"torrent","id":{torrentId}}}]'
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def addFolder(self, name):
+    def add_folder(self, name: str) -> Dict[str, Any]:
         """
-        Add a folder
+        Add a folder.
 
         Args:
-            name (str): Folder name to add
+            name (str): Folder name to add.
 
         Example:
-            >>> response = account.addFolder(name='New Folder')
+            >>> response = client.add_folder(name='New Folder')
             >>> print(response)
         """
+        return self._request("post", "add_folder", data={"name": name})
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'add_folder'
-        }
-
-        data = {
-            'name': name
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def searchFiles(self, query):
+    def search_files(self, query: str) -> Dict[str, Any]:
         """
-        Search for files
+        Search for files.
 
         Args:
-            query (str): The query to search for
+            query (str): The query to search for.
 
         Example:
-            >>> response = account.searchFiles(query='harry potter')
+            >>> response = client.search_files(query='harry potter')
             >>> print(response)
         """
+        return self._request("post", "search_files", data={"search_query": query})
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'search_files'
-        }
-
-        data = {
-            'search_query': query
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def changeName(self, name, password):
+    def change_name(self, name: str, password: str) -> Dict[str, Any]:
         """
-        Change the name of the account
+        Change the name of the account.
 
         Args:
-            name (str): The new name of the account
-            password (str): The password of the account
+            name (str): The new name of the account.
+            password (str): The password of the account.
 
         Example:
-            >>> response = account.changeName(name='New Name', password='password')
+            >>> response = client.change_name(name='New Name', password='password')
             >>> print(response)
         """
+        data = {"setting": "fullname", "password": password, "fullname": name}
+        return self._request("post", "user_account_modify", data=data)
 
-        params = {
-            'access_token': self._access_token,
-            'func': 'user_account_modify'
-        }
-
-        data = {
-            'setting': 'fullname',
-            'password': password,
-            'fullname': name
-        }
-
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def changePassword(self, oldPassword, newPassword):
+    def change_password(self, old_password: str, new_password: str) -> Dict[str, Any]:
         """
-        Change the password of the account
+        Change the password of the account.
 
         Args:
-            oldPassword (str): The old password of the account
-            newPassword (str): The new password of the account
+            old_password (str): The old password of the account.
+            new_password (str): The new password of the account.
 
         Example:
-            >>> response = account.changePassword(oldPassword='oldPassword', newPassword='newPassword')
+            >>> response = client.change_password(old_password='old', new_password='new')
             >>> print(response)
         """
-
-        params = {
-            'access_token': self._access_token,
-            'func': 'user_account_modify'
-        }
-
         data = {
-            'setting': 'password',
-            'password': oldPassword,
-            'new_password': newPassword,
-            'new_password_repeat': newPassword
+            "setting": "password",
+            "password": old_password,
+            "new_password": new_password,
+            "new_password_repeat": new_password,
         }
+        return self._request("post", "user_account_modify", data=data)
 
-        response = requests.post(self._base_url, params=params, data=data)
-        return response
-
-    @__autoRefresh
-    def getDevices(self):
+    def get_devices(self) -> Dict[str, Any]:
         """
-        Get the devices connected to the seedr account
+        Get the devices connected to the seedr account.
 
         Example:
-            >>> response = account.getDevices()
+            >>> response = client.get_devices()
             >>> print(response)
         """
-        params = {
-            'access_token': self._access_token,
-            'func': 'get_devices'
-        }
+        return self._request("get", "get_devices")
 
-        response = requests.get(self._base_url, params=params)
-        return response
+    def close(self) -> None:
+        """Closes the underlying HTTP client."""
+        self._client.close()
+
+    def __enter__(self) -> "Seedr":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
