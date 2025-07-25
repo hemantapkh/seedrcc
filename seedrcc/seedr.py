@@ -4,6 +4,7 @@ import httpx
 
 from . import _constants
 from ._login import _Login
+from ._token import Token
 from .exceptions import APIError, AuthenticationError
 
 
@@ -14,35 +15,33 @@ class Seedr:
     e.g., `Seedr.from_password(...)`
     """
 
-    _access_token: str
-    _refresh_token: Optional[str]
-    _device_code: Optional[str]
-    _on_token_refresh: Optional[Callable[[Dict[str, Any]], None]]
+    _token: Token
+    _on_token_refresh: Optional[Callable[[Token], None]]
     _client: httpx.Client
 
     def __init__(
         self,
-        access_token: str,
-        refresh_token: Optional[str] = None,
-        device_code: Optional[str] = None,
-        on_token_refresh: Optional[Callable[[Dict[str, Any]], None]] = None,
+        token: Token,
+        on_token_refresh: Optional[Callable[[Token], None]] = None,
+        httpx_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        Initializes the client with ready-to-use tokens.
-        For most use cases, prefer using a factory method like `from_password` or `from_refresh_token`.
+        Initializes the client with a Token object.
 
         Args:
-            access_token (str): A valid access token for the Seedr API.
-            refresh_token (str, optional): A refresh token for automatically renewing the session.
-            device_code (str, optional): A device code for renewing the session.
-            on_token_refresh (Callable, optional): A function to call with new token info when the session is refreshed.
+            token (Token): A Token object containing the necessary authentication details.
+            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            httpx_kwargs (Dict, optional): A dictionary of keyword arguments to pass to the underlying `httpx.Client`.
+                This is useful for setting timeouts, proxies, custom headers, etc.
         """
-        self._access_token = access_token
-        self._refresh_token = refresh_token
-        self._device_code = device_code
+        self._token = token
         self._on_token_refresh = on_token_refresh
+        self._client = httpx.Client(**(httpx_kwargs or {}))
 
-        self._client = httpx.Client()
+    @property
+    def token(self) -> Token:
+        """The current authentication token used by the client."""
+        return self._token
 
     @staticmethod
     def get_device_code() -> Dict[str, Any]:
@@ -52,56 +51,78 @@ class Seedr:
 
         Example:
             >>> codes = Seedr.get_device_code()
-            >>> print(f"Go to {codes['verification_url']} and enter {codes['user_code']}")
         """
         with _Login() as login_client:
             return login_client.get_device_code()
 
     @classmethod
-    def from_device_code(cls: Type["Seedr"], device_code: str, **kwargs: Any) -> "Seedr":
+    def from_device_code(
+        cls: Type["Seedr"],
+        device_code: str,
+        on_token_refresh: Optional[Callable[[Token], None]] = None,
+        **httpx_kwargs: Any,
+    ) -> "Seedr":
         """
-        Step 2 of the device flow.
         Creates a new client by authorizing with a device code obtained from `get_device_code`.
 
         Args:
             device_code (str): The device code to authorize.
+            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         with _Login() as login_client:
             response = login_client.authorize_device(device_code)
 
-        return cls(
+        token = Token(
             access_token=response["access_token"],
             refresh_token=response.get("refresh_token"),
             device_code=device_code,
-            **kwargs,
         )
+        return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
 
     @classmethod
-    def from_password(cls: Type["Seedr"], username: str, password: str, **kwargs: Any) -> "Seedr":
+    def from_password(
+        cls: Type["Seedr"],
+        username: str,
+        password: str,
+        on_token_refresh: Optional[Callable[[Token], None]] = None,
+        **httpx_kwargs: Any,
+    ) -> "Seedr":
         """
         Creates a new client by authenticating with a username and password.
 
         Args:
             username (str): The user's Seedr username (email).
             password (str): The user's Seedr password.
+            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         with _Login() as login_client:
             response = login_client.authorize_password(username, password)
 
-        return cls(access_token=response["access_token"], refresh_token=response.get("refresh_token"), **kwargs)
+        token = Token(access_token=response["access_token"], refresh_token=response.get("refresh_token"))
+        return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
 
     @classmethod
-    def from_refresh_token(cls: Type["Seedr"], refresh_token: str, **kwargs: Any) -> "Seedr":
+    def from_refresh_token(
+        cls: Type["Seedr"],
+        refresh_token: str,
+        on_token_refresh: Optional[Callable[[Token], None]] = None,
+        **httpx_kwargs: Any,
+    ) -> "Seedr":
         """
         Creates a new client by refreshing an existing refresh token.
 
         Args:
             refresh_token (str): A valid refresh token.
+            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         with _Login() as login_client:
             response = login_client.refresh_token(refresh_token)
 
-        return cls(access_token=response["access_token"], refresh_token=refresh_token, **kwargs)
+        token = Token(access_token=response["access_token"], refresh_token=refresh_token)
+        return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
 
     def _request(self, http_method: str, func: str, **kwargs: Any) -> Dict[str, Any]:
         """
@@ -109,7 +130,7 @@ class Seedr:
         Handles token refresh automatically.
         """
         params = kwargs.pop("params", {})
-        params["access_token"] = self._access_token
+        params["access_token"] = self._token.access_token
         params["func"] = func
 
         try:
@@ -123,7 +144,7 @@ class Seedr:
 
         if isinstance(data, dict) and data.get("error") == "expired_token":
             self._perform_token_refresh()
-            params["access_token"] = self._access_token
+            params["access_token"] = self._token.access_token
             response = self._client.request(http_method, _constants.RESOURCE_URL, params=params, **kwargs)
             response.raise_for_status()
             data = response.json()
@@ -134,13 +155,11 @@ class Seedr:
         """Helper method to refresh the token."""
         try:
             with _Login() as login_client:
-                if self._refresh_token:
-                    response = login_client.refresh_token(self._refresh_token)
-                elif self._device_code:
-                    response = login_client.authorize_device(self._device_code)
+                if self._token.refresh_token:
+                    response = login_client.refresh_token(self._token.refresh_token)
+                elif self._token.device_code:
+                    response = login_client.authorize_device(self._token.device_code)
                 else:
-                    # This path should ideally not be reached if called from _request
-                    # but is kept for robustness, especially for manual refresh_token() calls.
                     raise AuthenticationError("Session expired. No refresh token or device code available.")
         except APIError as e:
             raise AuthenticationError("Failed to refresh token. Please re-authenticate manually.") from e
@@ -148,15 +167,10 @@ class Seedr:
         if "access_token" not in response:
             raise AuthenticationError("Token refresh failed. The response did not contain a new access token.")
 
-        self._access_token = response["access_token"]
+        self._token.access_token = response["access_token"]
 
         if self._on_token_refresh:
-            token_data = {
-                "access_token": self._access_token,
-                "refresh_token": self._refresh_token,
-                "device_code": self._device_code,
-            }
-            self._on_token_refresh(token_data)
+            self._on_token_refresh(self._token)
 
     def refresh_token(self) -> None:
         """
@@ -325,6 +339,11 @@ class Seedr:
         data = {"rename_to": rename_to, "folder_id": folder_id}
         return self._request("post", "rename", data=data)
 
+    def _delete_item(self, item_type: str, item_id: str) -> Dict[str, Any]:
+        """Helper to delete a file, folder, or torrent."""
+        data = {"delete_arr": f'[{{"type":"{item_type}","id":{item_id}}}]'}
+        return self._request("post", "delete", data=data)
+
     def delete_file(self, file_id: str) -> Dict[str, Any]:
         """
         Delete a file.
@@ -336,8 +355,7 @@ class Seedr:
             >>> response = client.delete_file(file_id='12345')
             >>> print(response)
         """
-        data = {"delete_arr": f'[{{"type":"file","id":{file_id}}}]'}
-        return self._request("post", "delete", data=data)
+        return self._delete_item("file", file_id)
 
     def delete_folder(self, folder_id: str) -> Dict[str, Any]:
         """
@@ -350,8 +368,7 @@ class Seedr:
             >>> response = client.delete_folder(folder_id='12345')
             >>> print(response)
         """
-        data = {"delete_arr": f'[{{"type":"folder","id":{folder_id}}}]'}
-        return self._request("post", "delete", data=data)
+        return self._delete_item("folder", folder_id)
 
     def delete_wishlist(self, wishlist_id: str) -> Dict[str, Any]:
         """
@@ -377,8 +394,7 @@ class Seedr:
             >>> response = client.delete_torrent(torrent_id='12345')
             >>> print(response)
         """
-        data = {"delete_arr": f'[{{"type":"torrent","id":{torrent_id}}}]'}
-        return self._request("post", "delete", data=data)
+        return self._delete_item("torrent", torrent_id)
 
     def add_folder(self, name: str) -> Dict[str, Any]:
         """
