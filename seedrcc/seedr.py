@@ -1,8 +1,8 @@
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Type
 
 import httpx
 
-from . import _constants
+from . import _constants, models
 from ._login import _Login
 from ._token import Token
 from .exceptions import APIError, AuthenticationError, NetworkError, ServerError
@@ -30,9 +30,11 @@ class Seedr:
 
         Args:
             token (Token): A Token object containing the necessary authentication details.
-            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
-            httpx_kwargs (Dict, optional): A dictionary of keyword arguments to pass to the underlying `httpx.Client`.
-                This is useful for setting timeouts, proxies, custom headers, etc.
+            on_token_refresh (Callable, optional): A callback function that is called
+                with the new Token object when the session is refreshed.
+            httpx_kwargs (Dict, optional): A dictionary of keyword arguments to pass to the
+                underlying `httpx.Client`. This is useful for setting timeouts,
+                proxies, custom headers, etc.
         """
         self._token = token
         self._on_token_refresh = on_token_refresh
@@ -67,7 +69,8 @@ class Seedr:
 
         Args:
             device_code (str): The device code to authorize.
-            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            on_token_refresh (Callable, optional): A callback function that is called
+                with the new Token object when the session is refreshed.
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         try:
@@ -105,7 +108,8 @@ class Seedr:
         Args:
             username (str): The user's Seedr username (email).
             password (str): The user's Seedr password.
-            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            on_token_refresh (Callable, optional): A callback function that is called
+                with the new Token object when the session is refreshed.
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         try:
@@ -135,7 +139,8 @@ class Seedr:
 
         Args:
             refresh_token (str): A valid refresh token.
-            on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
+            on_token_refresh (Callable, optional): A callback function that is called
+                with the new Token object when the session is refreshed.
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         try:
@@ -238,25 +243,27 @@ class Seedr:
         """
         self._perform_token_refresh()
 
-    def get_settings(self) -> Dict[str, Any]:
+    def get_settings(self) -> models.UserSettings:
         """
         Get the user settings.
 
         Example:
-            >>> response = client.get_settings()
-            >>> print(response)
+            >>> settings = client.get_settings()
+            >>> print(settings.account.username)
         """
-        return self._request("get", "get_settings")
+        response_data = self._request("get", "get_settings")
+        return models.UserSettings.from_dict(response_data)
 
-    def get_memory_bandwidth(self) -> Dict[str, Any]:
+    def get_memory_bandwidth(self) -> models.MemoryBandwidth:
         """
         Get the memory and bandwidth usage.
 
         Example:
-            >>> response = client.get_memory_bandwidth()
-            >>> print(response)
+            >>> usage = client.get_memory_bandwidth()
+            >>> print(f"Space used: {usage.space_used}/{usage.space_max}")
         """
-        return self._request("get", "get_memory_bandwidth")
+        response_data = self._request("get", "get_memory_bandwidth")
+        return models.MemoryBandwidth.from_dict(response_data)
 
     def add_torrent(
         self,
@@ -264,7 +271,7 @@ class Seedr:
         torrent_file: Optional[str] = None,
         wishlist_id: Optional[str] = None,
         folder_id: str = "-1",
-    ) -> Dict[str, Any]:
+    ) -> models.AddTorrentResult:
         """
         Add a torrent to the seedr account for downloading.
 
@@ -275,8 +282,8 @@ class Seedr:
             folder_id (str, optional): The folder ID to add the torrent to. Defaults to root ('-1').
 
         Example:
-            >>> response = client.add_torrent(magnet_link='magnet:?xt=...')
-            >>> print(response)
+            >>> result = client.add_torrent(magnet_link='magnet:?xt=...')
+            >>> print(f"Added torrent: {result.title}")
         """
         data = {
             "torrent_magnet": magnet_link,
@@ -295,11 +302,13 @@ class Seedr:
                     files = {"torrent_file": f}
                     # The request is made outside the `with` block, but the file handle is passed.
                     # httpx will handle reading the file.
-                    return self._request("post", "add_torrent", data=data, files=files)
+                    response_data = self._request("post", "add_torrent", data=data, files=files)
+                    return models.AddTorrentResult.from_dict(response_data)
 
-        return self._request("post", "add_torrent", data=data, files=files)
+        response_data = self._request("post", "add_torrent", data=data, files=files)
+        return models.AddTorrentResult.from_dict(response_data)
 
-    def scan_page(self, url: str) -> Dict[str, Any]:
+    def scan_page(self, url: str) -> List[models.Torrent]:
         """
         Scan a page and return a list of torrents. For example,
         you can pass the torrent link of 1337x.to and it will fetch
@@ -309,12 +318,15 @@ class Seedr:
             url (str): The url of the page to scan.
 
         Example:
-            >>> response = client.scan_page(url='https://1337x.to/torrent/1010994')
-            >>> print(response)
+            >>> torrents = client.scan_page(url='https://1337x.to/torrent/1010994')
+            >>> for torrent in torrents:
+            ...     print(torrent.name)
         """
-        return self._request("post", "scan_page", data={"url": url})
+        response_data = self._request("post", "scan_page", data={"url": url})
+        torrents_data = response_data.get("torrents", [])
+        return [models.Torrent.from_dict(t) for t in torrents_data]
 
-    def create_archive(self, folder_id: str) -> Dict[str, Any]:
+    def create_archive(self, folder_id: str) -> models.CreateArchiveResult:
         """
         Create an archive link of a folder.
 
@@ -322,13 +334,14 @@ class Seedr:
             folder_id (str): The folder id to create the archive of.
 
         Example:
-            >>> response = client.create_archive(folder_id='12345')
-            >>> print(response)
+            >>> result = client.create_archive(folder_id='12345')
+            >>> print(f"Archive URL: {result.archive_url}")
         """
         data = {"archive_arr": f'[{{"type":"folder","id":{folder_id}}}]'}
-        return self._request("post", "create_empty_archive", data=data)
+        response_data = self._request("post", "create_empty_archive", data=data)
+        return models.CreateArchiveResult.from_dict(response_data)
 
-    def fetch_file(self, file_id: str) -> Dict[str, Any]:
+    def fetch_file(self, file_id: str) -> models.FetchFileResult:
         """
         Create a link of a file.
 
@@ -336,12 +349,13 @@ class Seedr:
             file_id (string): The file id to fetch.
 
         Example:
-            >>> response = client.fetch_file(file_id='12345')
-            >>> print(response)
+            >>> result = client.fetch_file(file_id='12345')
+            >>> print(f"Download URL: {result.url}")
         """
-        return self._request("post", "fetch_file", data={"folder_file_id": file_id})
+        response_data = self._request("post", "fetch_file", data={"folder_file_id": file_id})
+        return models.FetchFileResult.from_dict(response_data)
 
-    def list_contents(self, folder_id: str = "0", content_type: str = "folder") -> Dict[str, Any]:
+    def list_contents(self, folder_id: str = "0", content_type: str = "folder") -> models.Folder:
         """
         List the contents of a folder.
 
@@ -354,9 +368,10 @@ class Seedr:
             >>> print(response)
         """
         data = {"content_type": content_type, "content_id": folder_id}
-        return self._request("post", "list_contents", data=data)
+        response_data = self._request("post", "list_contents", data=data)
+        return models.Folder.from_dict(response_data)
 
-    def rename_file(self, file_id: str, rename_to: str) -> Dict[str, Any]:
+    def rename_file(self, file_id: str, rename_to: str) -> models.APIResult:
         """
         Rename a file.
 
@@ -365,13 +380,15 @@ class Seedr:
             rename_to (str): The new name of the file.
 
         Example:
-            >>> response = client.rename_file(file_id='12345', rename_to='newName')
-            >>> print(response)
+            >>> result = client.rename_file(file_id='12345', rename_to='newName')
+            >>> if result.result:
+            ...     print("File renamed successfully.")
         """
         data = {"rename_to": rename_to, "file_id": file_id}
-        return self._request("post", "rename", data=data)
+        response_data = self._request("post", "rename", data=data)
+        return models.APIResult.from_dict(response_data)
 
-    def rename_folder(self, folder_id: str, rename_to: str) -> Dict[str, Any]:
+    def rename_folder(self, folder_id: str, rename_to: str) -> models.APIResult:
         """
         Rename a folder.
 
@@ -380,18 +397,21 @@ class Seedr:
             rename_to (str): The new name of the folder.
 
         Example:
-            >>> response = client.rename_folder(folder_id='12345', rename_to='newName')
-            >>> print(response)
+            >>> result = client.rename_folder(folder_id='12345', rename_to='newName')
+            >>> if result.result:
+            ...     print("Folder renamed successfully.")
         """
         data = {"rename_to": rename_to, "folder_id": folder_id}
-        return self._request("post", "rename", data=data)
+        response_data = self._request("post", "rename", data=data)
+        return models.APIResult.from_dict(response_data)
 
-    def _delete_item(self, item_type: str, item_id: str) -> Dict[str, Any]:
+    def _delete_item(self, item_type: str, item_id: str) -> models.APIResult:
         """Helper to delete a file, folder, or torrent."""
         data = {"delete_arr": f'[{{"type":"{item_type}","id":{item_id}}}]'}
-        return self._request("post", "delete", data=data)
+        response_data = self._request("post", "delete", data=data)
+        return models.APIResult.from_dict(response_data)
 
-    def delete_file(self, file_id: str) -> Dict[str, Any]:
+    def delete_file(self, file_id: str) -> models.APIResult:
         """
         Delete a file.
 
@@ -404,7 +424,7 @@ class Seedr:
         """
         return self._delete_item("file", file_id)
 
-    def delete_folder(self, folder_id: str) -> Dict[str, Any]:
+    def delete_folder(self, folder_id: str) -> models.APIResult:
         """
         Delete a folder.
 
@@ -417,7 +437,7 @@ class Seedr:
         """
         return self._delete_item("folder", folder_id)
 
-    def delete_wishlist(self, wishlist_id: str) -> Dict[str, Any]:
+    def delete_wishlist(self, wishlist_id: str) -> models.APIResult:
         """
         Delete an item from the wishlist.
 
@@ -425,12 +445,12 @@ class Seedr:
             wishlist_id (str): The wishlistId of item to delete.
 
         Example:
-            >>> response = client.delete_wishlist(wishlist_id='12345')
-            >>> print(response)
+            >>> result = client.delete_wishlist(wishlist_id='12345')
         """
-        return self._request("post", "remove_wishlist", data={"id": wishlist_id})
+        response_data = self._request("post", "remove_wishlist", data={"id": wishlist_id})
+        return models.APIResult.from_dict(response_data)
 
-    def delete_torrent(self, torrent_id: str) -> Dict[str, Any]:
+    def delete_torrent(self, torrent_id: str) -> models.APIResult:
         """
         Delete an active downloading torrent.
 
@@ -443,7 +463,7 @@ class Seedr:
         """
         return self._delete_item("torrent", torrent_id)
 
-    def add_folder(self, name: str) -> Dict[str, Any]:
+    def add_folder(self, name: str) -> models.APIResult:
         """
         Add a folder.
 
@@ -451,12 +471,14 @@ class Seedr:
             name (str): Folder name to add.
 
         Example:
-            >>> response = client.add_folder(name='New Folder')
-            >>> print(response)
+            >>> result = client.add_folder(name='New Folder')
+            >>> if result.result:
+            ...     print("Folder created successfully.")
         """
-        return self._request("post", "add_folder", data={"name": name})
+        response_data = self._request("post", "add_folder", data={"name": name})
+        return models.APIResult.from_dict(response_data)
 
-    def search_files(self, query: str) -> Dict[str, Any]:
+    def search_files(self, query: str) -> models.Folder:
         """
         Search for files.
 
@@ -464,12 +486,14 @@ class Seedr:
             query (str): The query to search for.
 
         Example:
-            >>> response = client.search_files(query='harry potter')
-            >>> print(response)
+            >>> results = client.search_files(query='harry potter')
+            >>> for f in results.folders:
+            ...     print(f"Found folder: {f.name}")
         """
-        return self._request("post", "search_files", data={"search_query": query})
+        response_data = self._request("post", "search_files", data={"search_query": query})
+        return models.Folder.from_dict(response_data)
 
-    def change_name(self, name: str, password: str) -> Dict[str, Any]:
+    def change_name(self, name: str, password: str) -> models.APIResult:
         """
         Change the name of the account.
 
@@ -478,13 +502,13 @@ class Seedr:
             password (str): The password of the account.
 
         Example:
-            >>> response = client.change_name(name='New Name', password='password')
-            >>> print(response)
+            >>> result = client.change_name(name='New Name', password='password')
         """
         data = {"setting": "fullname", "password": password, "fullname": name}
-        return self._request("post", "user_account_modify", data=data)
+        response_data = self._request("post", "user_account_modify", data=data)
+        return models.APIResult.from_dict(response_data)
 
-    def change_password(self, old_password: str, new_password: str) -> Dict[str, Any]:
+    def change_password(self, old_password: str, new_password: str) -> models.APIResult:
         """
         Change the password of the account.
 
@@ -493,8 +517,7 @@ class Seedr:
             new_password (str): The new password of the account.
 
         Example:
-            >>> response = client.change_password(old_password='old', new_password='new')
-            >>> print(response)
+            >>> result = client.change_password(old_password='old', new_password='new')
         """
         data = {
             "setting": "password",
@@ -502,17 +525,21 @@ class Seedr:
             "new_password": new_password,
             "new_password_repeat": new_password,
         }
-        return self._request("post", "user_account_modify", data=data)
+        response_data = self._request("post", "user_account_modify", data=data)
+        return models.APIResult.from_dict(response_data)
 
-    def get_devices(self) -> Dict[str, Any]:
+    def get_devices(self) -> List[models.Device]:
         """
         Get the devices connected to the seedr account.
 
         Example:
-            >>> response = client.get_devices()
-            >>> print(response)
+            >>> devices = client.get_devices()
+            >>> for device in devices:
+            ...     print(device.client_name)
         """
-        return self._request("get", "get_devices")
+        response_data = self._request("get", "get_devices")
+        devices_data = response_data.get("devices", [])
+        return [models.Device.from_dict(d) for d in devices_data]
 
     def close(self) -> None:
         """Closes the underlying HTTP client."""

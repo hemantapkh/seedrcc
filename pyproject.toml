@@ -31,3 +31,6 @@ dependencies = [
 "Homepage" = "https://github.com/hemantapkh/seedrcc"
 "Documentation" = "https://seedrcc.readthedocs.io/en/latest/"
 "Bug Tracker" = "https://github.com/hemantapkh/seedrcc/issues"
+
+[tool.ruff]
+line-length = 120
