@@ -5,7 +5,7 @@ import httpx
 from . import _constants
 from ._login import _Login
 from ._token import Token
-from .exceptions import APIError, AuthenticationError
+from .exceptions import APIError, AuthenticationError, NetworkError, ServerError
 
 
 class Seedr:
@@ -70,8 +70,19 @@ class Seedr:
             on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
-        with _Login() as login_client:
-            response = login_client.authorize_device(device_code)
+        try:
+            with _Login() as login_client:
+                response = login_client.authorize_device(device_code)
+        except httpx.HTTPStatusError as e:
+            if 500 <= e.response.status_code < 600:
+                message = (
+                    f"Server error during device authorization: {e.response.status_code} {e.response.reason_phrase}"
+                )
+                raise ServerError(message, response=e.response) from e
+            # For 4xx errors
+            raise AuthenticationError("Failed to authorize device", response=e.response) from e
+        except httpx.RequestError as e:
+            raise NetworkError(str(e)) from e
 
         token = Token(
             access_token=response["access_token"],
@@ -97,8 +108,17 @@ class Seedr:
             on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
-        with _Login() as login_client:
-            response = login_client.authorize_password(username, password)
+        try:
+            with _Login() as login_client:
+                response = login_client.authorize_password(username, password)
+        except httpx.HTTPStatusError as e:
+            if 500 <= e.response.status_code < 600:
+                message = f"Server error during authentication: {e.response.status_code} {e.response.reason_phrase}"
+                raise ServerError(message, response=e.response) from e
+            # For 4xx errors
+            raise AuthenticationError("Authentication failed", response=e.response) from e
+        except httpx.RequestError as e:
+            raise NetworkError(str(e)) from e
 
         token = Token(access_token=response["access_token"], refresh_token=response.get("refresh_token"))
         return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
@@ -118,8 +138,17 @@ class Seedr:
             on_token_refresh (Callable, optional): A function to call with the new Token object when the session is refreshed.
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
-        with _Login() as login_client:
-            response = login_client.refresh_token(refresh_token)
+        try:
+            with _Login() as login_client:
+                response = login_client.refresh_token(refresh_token)
+        except httpx.HTTPStatusError as e:
+            if 500 <= e.response.status_code < 600:
+                message = f"Server error while refreshing token: {e.response.status_code} {e.response.reason_phrase}"
+                raise ServerError(message, response=e.response) from e
+            # For 4xx errors
+            raise AuthenticationError("Failed to refresh token", response=e.response) from e
+        except httpx.RequestError as e:
+            raise NetworkError(str(e)) from e
 
         token = Token(access_token=response["access_token"], refresh_token=refresh_token)
         return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
@@ -127,7 +156,7 @@ class Seedr:
     def _request(self, http_method: str, func: str, **kwargs: Any) -> Dict[str, Any]:
         """
         A centralized method for making API requests.
-        Handles token refresh automatically.
+        Handles token refresh automatically and raises APIError for API-level errors.
         """
         params = kwargs.pop("params", {})
         params["access_token"] = self._token.access_token
@@ -138,16 +167,28 @@ class Seedr:
             response.raise_for_status()
             data = response.json()
         except httpx.HTTPStatusError as e:
-            raise APIError(f"API returned status {e.response.status_code}", response=e.response) from e
+            if 500 <= e.response.status_code < 600:
+                message = f"Server error: {e.response.status_code} {e.response.reason_phrase}"
+                raise ServerError(message, response=e.response) from e
+            # For 4xx errors
+            raise APIError(f"API returned client error: {e.response.status_code}", response=e.response) from e
         except httpx.RequestError as e:
-            raise APIError(f"Request failed: {e.request.url}") from e
+            raise NetworkError(str(e)) from e
 
+        # Handle token expiration
         if isinstance(data, dict) and data.get("error") == "expired_token":
             self._perform_token_refresh()
+            # Retry the request with the new token
             params["access_token"] = self._token.access_token
             response = self._client.request(http_method, _constants.RESOURCE_URL, params=params, **kwargs)
             response.raise_for_status()
             data = response.json()
+
+        # Handle other API-level errors reported in the response body.
+        # This checks for cases where the 'result' is not explicitly `True`.
+        if isinstance(data, dict) and "result" in data and data["result"] is not True:
+            error_message = data.get("error", "Unknown API error")
+            raise APIError(error_message, response=response)
 
         return data
 
@@ -161,8 +202,14 @@ class Seedr:
                     response = login_client.authorize_device(self._token.device_code)
                 else:
                     raise AuthenticationError("Session expired. No refresh token or device code available.")
-        except APIError as e:
-            raise AuthenticationError("Failed to refresh token. Please re-authenticate manually.") from e
+        except httpx.HTTPStatusError as e:
+            if 500 <= e.response.status_code < 600:
+                message = f"Server error while refreshing token: {e.response.status_code} {e.response.reason_phrase}"
+                raise ServerError(message, response=e.response) from e
+            # For 4xx errors, let AuthenticationError parse the detailed error
+            raise AuthenticationError("Failed to refresh token", response=e.response) from e
+        except httpx.RequestError as e:
+            raise NetworkError(str(e)) from e
 
         if "access_token" not in response:
             raise AuthenticationError("Token refresh failed. The response did not contain a new access token.")
