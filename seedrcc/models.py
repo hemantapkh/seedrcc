@@ -157,6 +157,16 @@ class FetchFileResult(BaseModel):
 
 
 @dataclass
+class DeviceCode(BaseModel):
+    """Represents the codes for device authentication."""
+    expires_in: int
+    interval: int
+    device_code: str
+    user_code: str
+    verification_url: str
+
+
+@dataclass
 class CreateArchiveResult(BaseModel):
     """Represents the result of creating an archive."""
     result: bool
