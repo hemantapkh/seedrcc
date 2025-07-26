@@ -46,16 +46,18 @@ class Seedr:
         return self._token
 
     @staticmethod
-    def get_device_code() -> Dict[str, Any]:
+    def get_device_code() -> models.DeviceCode:
         """
         Step 1 of the device flow.
         Gets the device and user codes required for authorization.
 
         Example:
             >>> codes = Seedr.get_device_code()
+            >>> print(f"Go to {codes.verification_url} and enter {codes.user_code}")
         """
         with _Login() as login_client:
-            return login_client.get_device_code()
+            response_data = login_client.get_device_code()
+        return models.DeviceCode.from_dict(response_data)
 
     @classmethod
     def from_device_code(
