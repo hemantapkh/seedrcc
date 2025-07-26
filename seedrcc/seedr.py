@@ -2,8 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Type
 
 import httpx
 
-from . import _constants, models
-from ._login import _Login
+from . import _constants, _login, models
 from ._token import Token
 from .exceptions import APIError, AuthenticationError, NetworkError, ServerError
 
@@ -55,8 +54,8 @@ class Seedr:
             >>> codes = Seedr.get_device_code()
             >>> print(f"Go to {codes.verification_url} and enter {codes.user_code}")
         """
-        with _Login() as login_client:
-            response_data = login_client.get_device_code()
+        with httpx.Client() as client:
+            response_data = _login.get_device_code(client)
         return models.DeviceCode.from_dict(response_data)
 
     @classmethod
@@ -76,8 +75,8 @@ class Seedr:
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         try:
-            with _Login() as login_client:
-                response = login_client.authorize_device(device_code)
+            with httpx.Client(**httpx_kwargs) as client:
+                response = _login.authorize_device(client, device_code)
         except httpx.HTTPStatusError as e:
             if 500 <= e.response.status_code < 600:
                 message = (
@@ -115,8 +114,8 @@ class Seedr:
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         try:
-            with _Login() as login_client:
-                response = login_client.authorize_password(username, password)
+            with httpx.Client(**httpx_kwargs) as client:
+                response = _login.authorize_password(client, username, password)
         except httpx.HTTPStatusError as e:
             if 500 <= e.response.status_code < 600:
                 message = f"Server error during authentication: {e.response.status_code} {e.response.reason_phrase}"
@@ -146,8 +145,8 @@ class Seedr:
             **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
         """
         try:
-            with _Login() as login_client:
-                response = login_client.refresh_token(refresh_token)
+            with httpx.Client(**httpx_kwargs) as client:
+                response = _login.refresh_token(client, refresh_token)
         except httpx.HTTPStatusError as e:
             if 500 <= e.response.status_code < 600:
                 message = f"Server error while refreshing token: {e.response.status_code} {e.response.reason_phrase}"
@@ -202,13 +201,12 @@ class Seedr:
     def _perform_token_refresh(self) -> None:
         """Helper method to refresh the token."""
         try:
-            with _Login() as login_client:
-                if self._token.refresh_token:
-                    response = login_client.refresh_token(self._token.refresh_token)
-                elif self._token.device_code:
-                    response = login_client.authorize_device(self._token.device_code)
-                else:
-                    raise AuthenticationError("Session expired. No refresh token or device code available.")
+            if self._token.refresh_token:
+                response = _login.refresh_token(self._client, self._token.refresh_token)
+            elif self._token.device_code:
+                response = _login.authorize_device(self._client, self._token.device_code)
+            else:
+                raise AuthenticationError("Session expired. No refresh token or device code available.")
         except httpx.HTTPStatusError as e:
             if 500 <= e.response.status_code < 600:
                 message = f"Server error while refreshing token: {e.response.status_code} {e.response.reason_phrase}"
