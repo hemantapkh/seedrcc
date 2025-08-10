@@ -10,4 +10,4 @@ DEVICE_AUTHORIZE_URL = f"{BASE_API_URL}/device/authorize"
 
 # Client IDs
 DEVICE_CLIENT_ID = "seedr_xbmc"
-PASSWORD_CLIENT_ID = "seedr_chrome"
+PSWRD_CLIENT_ID = "seedr_chrome"

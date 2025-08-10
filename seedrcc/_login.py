@@ -31,7 +31,7 @@ def authorize_password(client: httpx.Client, username: str, password: str) -> Di
     """
     data = {
         "grant_type": "password",
-        "client_id": _constants.PASSWORD_CLIENT_ID,
+        "client_id": _constants.PSWRD_CLIENT_ID,
         "type": "login",
         "username": username,
         "password": password,
@@ -48,7 +48,7 @@ def refresh_token(client: httpx.Client, refresh_token: str) -> Dict[str, Any]:
     data = {
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
-        "client_id": _constants.PASSWORD_CLIENT_ID,
+        "client_id": _constants.PSWRD_CLIENT_ID,
     }
     response = client.post(_constants.TOKEN_URL, data=data)
     response.raise_for_status()
