@@ -22,7 +22,7 @@ class Seedr:
         self,
         token: Token,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
-        httpx_kwargs: Optional[Dict[str, Any]] = None,
+        httpx_client: Optional[httpx.Client] = None,
     ) -> None:
         """
         Initializes the client with a Token object.
@@ -31,13 +31,12 @@ class Seedr:
             token (Token): A Token object containing the necessary authentication details.
             on_token_refresh (Callable, optional): A callback function that is called
                 with the new Token object when the session is refreshed.
-            httpx_kwargs (Dict, optional): A dictionary of keyword arguments to pass to the
-                underlying `httpx.Client`. This is useful for setting timeouts,
-                proxies, custom headers, etc.
+            httpx_client (httpx.Client, optional): An existing httpx.Client instance.
+                If not provided, a new one will be created with default settings.
         """
         self._token = token
         self._on_token_refresh = on_token_refresh
-        self._client = httpx.Client(**(httpx_kwargs or {}))
+        self._client = httpx_client or httpx.Client()
 
     @property
     def token(self) -> Token:
@@ -63,7 +62,7 @@ class Seedr:
         cls: Type["Seedr"],
         device_code: str,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
-        **httpx_kwargs: Any,
+        httpx_client: Optional[httpx.Client] = None,
     ) -> "Seedr":
         """
         Creates a new client by authorizing with a device code obtained from `get_device_code`.
@@ -72,28 +71,37 @@ class Seedr:
             device_code (str): The device code to authorize.
             on_token_refresh (Callable, optional): A callback function that is called
                 with the new Token object when the session is refreshed.
-            **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
+            httpx_client (httpx.Client, optional): An existing httpx.Client instance.
+                If provided, its lifecycle is not managed by this method.
+                If not provided, a new one will be created with default settings.
         """
+        client = httpx_client or httpx.Client()
+        success = False
         try:
-            with httpx.Client(**httpx_kwargs) as client:
+            try:
                 response = _login.authorize_device(client, device_code)
-        except httpx.HTTPStatusError as e:
-            if 500 <= e.response.status_code < 600:
-                message = (
-                    f"Server error during device authorization: {e.response.status_code} {e.response.reason_phrase}"
-                )
-                raise ServerError(message, response=e.response) from e
-            # For 4xx errors
-            raise AuthenticationError("Failed to authorize device", response=e.response) from e
-        except httpx.RequestError as e:
-            raise NetworkError(str(e)) from e
+            except httpx.HTTPStatusError as e:
+                if 500 <= e.response.status_code < 600:
+                    message = (
+                        f"Server error during device authorization: {e.response.status_code} {e.response.reason_phrase}"
+                    )
+                    raise ServerError(message, response=e.response) from e
+                # For 4xx errors
+                raise AuthenticationError("Failed to authorize device", response=e.response) from e
+            except httpx.RequestError as e:
+                raise NetworkError(str(e)) from e
 
-        token = Token(
-            access_token=response["access_token"],
-            refresh_token=response.get("refresh_token"),
-            device_code=device_code,
-        )
-        return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
+            token = Token(
+                access_token=response["access_token"],
+                refresh_token=response.get("refresh_token"),
+                device_code=device_code,
+            )
+            instance = cls(token, on_token_refresh=on_token_refresh, httpx_client=client)
+            success = True
+            return instance
+        finally:
+            if httpx_client is None and not success:
+                client.close()
 
     @classmethod
     def from_password(
@@ -101,7 +109,7 @@ class Seedr:
         username: str,
         password: str,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
-        **httpx_kwargs: Any,
+        httpx_client: Optional[httpx.Client] = None,
     ) -> "Seedr":
         """
         Creates a new client by authenticating with a username and password.
@@ -111,29 +119,38 @@ class Seedr:
             password (str): The user's Seedr password.
             on_token_refresh (Callable, optional): A callback function that is called
                 with the new Token object when the session is refreshed.
-            **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
+            httpx_client (httpx.Client, optional): An existing httpx.Client instance.
+                If provided, its lifecycle is not managed by this method.
+                If not provided, a new one will be created with default settings.
         """
+        client = httpx_client or httpx.Client()
+        success = False
         try:
-            with httpx.Client(**httpx_kwargs) as client:
+            try:
                 response = _login.authorize_password(client, username, password)
-        except httpx.HTTPStatusError as e:
-            if 500 <= e.response.status_code < 600:
-                message = f"Server error during authentication: {e.response.status_code} {e.response.reason_phrase}"
-                raise ServerError(message, response=e.response) from e
-            # For 4xx errors
-            raise AuthenticationError("Authentication failed", response=e.response) from e
-        except httpx.RequestError as e:
-            raise NetworkError(str(e)) from e
+            except httpx.HTTPStatusError as e:
+                if 500 <= e.response.status_code < 600:
+                    message = f"Server error during authentication: {e.response.status_code} {e.response.reason_phrase}"
+                    raise ServerError(message, response=e.response) from e
+                # For 4xx errors
+                raise AuthenticationError("Authentication failed", response=e.response) from e
+            except httpx.RequestError as e:
+                raise NetworkError(str(e)) from e
 
-        token = Token(access_token=response["access_token"], refresh_token=response.get("refresh_token"))
-        return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
+            token = Token(access_token=response["access_token"], refresh_token=response.get("refresh_token"))
+            instance = cls(token, on_token_refresh=on_token_refresh, httpx_client=client)
+            success = True
+            return instance
+        finally:
+            if httpx_client is None and not success:
+                client.close()
 
     @classmethod
     def from_refresh_token(
         cls: Type["Seedr"],
         refresh_token: str,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
-        **httpx_kwargs: Any,
+        httpx_client: Optional[httpx.Client] = None,
     ) -> "Seedr":
         """
         Creates a new client by refreshing an existing refresh token.
@@ -142,22 +159,33 @@ class Seedr:
             refresh_token (str): A valid refresh token.
             on_token_refresh (Callable, optional): A callback function that is called
                 with the new Token object when the session is refreshed.
-            **httpx_kwargs: Keyword arguments to pass to the underlying `httpx.Client`.
+            httpx_client (httpx.Client, optional): An existing httpx.Client instance.
+                If provided, its lifecycle is not managed by this method.
+                If not provided, a new one will be created with default settings.
         """
+        client = httpx_client or httpx.Client()
+        success = False
         try:
-            with httpx.Client(**httpx_kwargs) as client:
+            try:
                 response = _login.refresh_token(client, refresh_token)
-        except httpx.HTTPStatusError as e:
-            if 500 <= e.response.status_code < 600:
-                message = f"Server error while refreshing token: {e.response.status_code} {e.response.reason_phrase}"
-                raise ServerError(message, response=e.response) from e
-            # For 4xx errors
-            raise AuthenticationError("Failed to refresh token", response=e.response) from e
-        except httpx.RequestError as e:
-            raise NetworkError(str(e)) from e
+            except httpx.HTTPStatusError as e:
+                if 500 <= e.response.status_code < 600:
+                    message = (
+                        f"Server error while refreshing token: {e.response.status_code} {e.response.reason_phrase}"
+                    )
+                    raise ServerError(message, response=e.response) from e
+                # For 4xx errors
+                raise AuthenticationError("Failed to refresh token", response=e.response) from e
+            except httpx.RequestError as e:
+                raise NetworkError(str(e)) from e
 
-        token = Token(access_token=response["access_token"], refresh_token=refresh_token)
-        return cls(token, on_token_refresh=on_token_refresh, httpx_kwargs=httpx_kwargs)
+            token = Token(access_token=response["access_token"], refresh_token=refresh_token)
+            instance = cls(token, on_token_refresh=on_token_refresh, httpx_client=client)
+            success = True
+            return instance
+        finally:
+            if httpx_client is None and not success:
+                client.close()
 
     def _request(self, http_method: str, func: str, **kwargs: Any) -> Dict[str, Any]:
         """
