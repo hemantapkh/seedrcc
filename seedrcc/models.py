@@ -4,12 +4,27 @@ from typing import Any, Dict, List, Optional
 
 from ._utils import parse_datetime
 
-# --- Base and Core Models ---
+__all__ = [
+    "File",
+    "Torrent",
+    "Folder",
+    "ListContentsResult",
+    "UserSettings",
+    "AccountInfo",
+    "AccountSettings",
+    "FetchFileResult",
+    "DeviceCode",
+    "CreateArchiveResult",
+    "Device",
+    "MemoryBandwidth",
+    "AddTorrentResult",
+    "APIResult",
+]
 
 
 @dataclass
-class BaseModel:
-    """Base model with a raw data field."""
+class _BaseModel:
+    """Base model with a raw data field. Internal use only."""
 
     _raw: Dict[str, Any] = field(repr=False, compare=False, init=False)
 
@@ -19,10 +34,7 @@ class BaseModel:
 
     @classmethod
     def from_dict(cls, data: dict):
-        """
-        Creates a model instance from a dictionary, ignoring unknown fields.
-        This is the generic constructor. Complex models should override this.
-        """
+        """Creates a model instance from a dictionary, ignoring unknown fields."""
         model_fields = {f.name for f in fields(cls)}
         filtered_data = {k: v for k, v in data.items() if k in model_fields}
         instance = cls(**filtered_data)
@@ -31,8 +43,8 @@ class BaseModel:
 
 
 @dataclass
-class File(BaseModel):
-    """Represents a file within Seedr. Field names match the API response."""
+class File(_BaseModel):
+    """Represents a file within Seedr."""
 
     file_id: int
     name: str
@@ -49,7 +61,6 @@ class File(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict) -> "File":
-        """Creates a File object from a dictionary."""
         instance = cls(
             file_id=data.get("file_id", 0),
             name=data.get("name", ""),
@@ -69,7 +80,7 @@ class File(BaseModel):
 
 
 @dataclass
-class Torrent(BaseModel):
+class Torrent(_BaseModel):
     """Represents a torrent in the user's account."""
 
     id: int
@@ -93,7 +104,6 @@ class Torrent(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict) -> "Torrent":
-        """Creates a Torrent object from a dictionary."""
         instance = cls(
             id=data.get("id", 0),
             name=data.get("name", ""),
@@ -119,8 +129,8 @@ class Torrent(BaseModel):
 
 
 @dataclass
-class Folder(BaseModel):
-    """Represents a folder within Seedr, which can contain files and other folders."""
+class Folder(_BaseModel):
+    """Represents a folder, which can contain files, torrents, and other folders."""
 
     id: int
     name: str
@@ -139,7 +149,6 @@ class Folder(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict) -> "Folder":
-        """Creates a Folder object from a dictionary, recursively."""
         instance = cls(
             id=data.get("id") or data.get("folder_id") or 0,
             name=data.get("name", ""),
@@ -168,11 +177,10 @@ class ListContentsResult(Folder):
     space_max: int = 0
     saw_walkthrough: int = 0
     type: str = ""
-    t: List[datetime] = field(default_factory=list)
+    t: List[Optional[datetime]] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict) -> "ListContentsResult":
-        """Creates a ListContentsResult directly from the API response."""
         folder = Folder.from_dict(data)
         instance = cls(
             id=folder.id,
@@ -199,37 +207,8 @@ class ListContentsResult(Folder):
         return instance
 
 
-# --- Other API Result Models ---
-
-
 @dataclass
-class FetchFileResult(BaseModel):
-    result: bool
-    url: str
-    name: str
-    size: int
-    code: Optional[int] = None
-
-
-@dataclass
-class DeviceCode(BaseModel):
-    expires_in: int
-    interval: int
-    device_code: str
-    user_code: str
-    verification_url: str
-
-
-@dataclass
-class CreateArchiveResult(BaseModel):
-    result: bool
-    archive_id: int
-    archive_url: str
-    code: Optional[int] = None
-
-
-@dataclass
-class AccountSettings(BaseModel):
+class AccountSettings(_BaseModel):
     """Represents the nested 'settings' object in the user settings response."""
 
     allow_remote_access: bool
@@ -240,7 +219,7 @@ class AccountSettings(BaseModel):
 
 
 @dataclass
-class AccountInfo(BaseModel):
+class AccountInfo(_BaseModel):
     """Represents the nested 'account' object in the user settings response."""
 
     username: str
@@ -259,7 +238,7 @@ class AccountInfo(BaseModel):
 
 
 @dataclass
-class UserSettings(BaseModel):
+class UserSettings(_BaseModel):
     """Represents the complete response from the get_settings endpoint."""
 
     result: bool
@@ -270,7 +249,6 @@ class UserSettings(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict) -> "UserSettings":
-        """Creates a UserSettings object from the nested API response."""
         instance = cls(
             result=data.get("result", False),
             code=data.get("code", 0),
@@ -283,7 +261,24 @@ class UserSettings(BaseModel):
 
 
 @dataclass
-class Device(BaseModel):
+class AddTorrentResult(_BaseModel):
+    result: bool
+    user_torrent_id: int
+    title: str
+    torrent_hash: str
+    code: Optional[int] = None
+
+
+@dataclass
+class CreateArchiveResult(_BaseModel):
+    result: bool
+    archive_id: int
+    archive_url: str
+    code: Optional[int] = None
+
+
+@dataclass
+class Device(_BaseModel):
     client_id: str
     client_name: str
     device_code: str
@@ -291,7 +286,25 @@ class Device(BaseModel):
 
 
 @dataclass
-class MemoryBandwidth(BaseModel):
+class DeviceCode(_BaseModel):
+    expires_in: int
+    interval: int
+    device_code: str
+    user_code: str
+    verification_url: str
+
+
+@dataclass
+class FetchFileResult(_BaseModel):
+    result: bool
+    url: str
+    name: str
+    size: int
+    code: Optional[int] = None
+
+
+@dataclass
+class MemoryBandwidth(_BaseModel):
     bandwidth_used: int
     bandwidth_max: int
     space_used: int
@@ -300,16 +313,6 @@ class MemoryBandwidth(BaseModel):
 
 
 @dataclass
-class APIResult(BaseModel):
+class APIResult(_BaseModel):
     result: bool
     code: Optional[int] = None
-
-
-@dataclass
-class AddTorrentResult(BaseModel):
-    result: bool
-    user_torrent_id: int
-    title: str
-    torrent_hash: str
-    code: Optional[int] = None
-
