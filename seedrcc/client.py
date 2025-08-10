@@ -2,8 +2,8 @@ from typing import Any, Callable, Dict, List, Optional, Type
 
 import httpx
 
-from . import _constants, _login, models
-from ._token import Token
+from . import _constants, _auth, models
+from .token import Token
 from .exceptions import APIError, AuthenticationError, NetworkError, ServerError
 
 
@@ -54,7 +54,7 @@ class Seedr:
             >>> print(f"Go to {codes.verification_url} and enter {codes.user_code}")
         """
         with httpx.Client() as client:
-            response_data = _login.get_device_code(client)
+            response_data = _auth.get_device_code(client)
         return models.DeviceCode.from_dict(response_data)
 
     @classmethod
@@ -79,7 +79,7 @@ class Seedr:
         success = False
         try:
             try:
-                response = _login.authorize_device(client, device_code)
+                response = _auth.authorize_device(client, device_code)
             except httpx.HTTPStatusError as e:
                 if 500 <= e.response.status_code < 600:
                     message = (
@@ -127,7 +127,7 @@ class Seedr:
         success = False
         try:
             try:
-                response = _login.authorize_password(client, username, password)
+                response = _auth.authorize_password(client, username, password)
             except httpx.HTTPStatusError as e:
                 if 500 <= e.response.status_code < 600:
                     message = f"Server error during authentication: {e.response.status_code} {e.response.reason_phrase}"
@@ -167,7 +167,7 @@ class Seedr:
         success = False
         try:
             try:
-                response = _login.refresh_token(client, refresh_token)
+                response = _auth.refresh_token(client, refresh_token)
             except httpx.HTTPStatusError as e:
                 if 500 <= e.response.status_code < 600:
                     message = (
@@ -230,9 +230,9 @@ class Seedr:
         """Helper method to refresh the token."""
         try:
             if self._token.refresh_token:
-                response = _login.refresh_token(self._client, self._token.refresh_token)
+                response = _auth.refresh_token(self._client, self._token.refresh_token)
             elif self._token.device_code:
-                response = _login.authorize_device(self._client, self._token.device_code)
+                response = _auth.authorize_device(self._client, self._token.device_code)
             else:
                 raise AuthenticationError("Session expired. No refresh token or device code available.")
         except httpx.HTTPStatusError as e:

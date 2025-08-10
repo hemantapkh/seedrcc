@@ -1,5 +1,5 @@
 from . import exceptions
-from ._token import Token
+from .token import Token
 from .models import (
     AccountInfo,
     AccountSettings,
@@ -15,7 +15,7 @@ from .models import (
     Torrent,
     UserSettings,
 )
-from .seedr import Seedr
+from .client import Seedr
 
 __all__ = [
     "Seedr",
