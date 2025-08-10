@@ -2,10 +2,15 @@ from dataclasses import dataclass, field, fields
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from ._utils import parse_datetime
+
+# --- Base and Core Models ---
+
 
 @dataclass
 class BaseModel:
     """Base model with a raw data field."""
+
     _raw: Dict[str, Any] = field(repr=False, compare=False, init=False)
 
     def raw(self) -> Dict[str, Any]:
@@ -18,7 +23,6 @@ class BaseModel:
         Creates a model instance from a dictionary, ignoring unknown fields.
         This is the generic constructor. Complex models should override this.
         """
-        # Use `fields` from dataclasses to get all defined fields for the class
         model_fields = {f.name for f in fields(cls)}
         filtered_data = {k: v for k, v in data.items() if k in model_fields}
         instance = cls(**filtered_data)
@@ -28,242 +32,46 @@ class BaseModel:
 
 @dataclass
 class File(BaseModel):
-    """Represents a file within Seedr."""
-    id: int
+    """Represents a file within Seedr. Field names match the API response."""
+
+    file_id: int
     name: str
     size: int
     folder_id: int
-    storage: str
-    last_updated: Optional[datetime] = None
-    stream_link: Optional[str] = None
-    stream_audio: Optional[str] = None
-    video_codec: Optional[str] = None
-    video_height: Optional[int] = None
-    video_width: Optional[int] = None
+    folder_file_id: int
+    hash: str
+    last_update: Optional[datetime] = None
+    play_audio: bool = False
+    play_video: bool = False
+    video_progress: Optional[str] = None
+    is_lost: int = 0
+    thumb: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: dict) -> "File":
         """Creates a File object from a dictionary."""
-        last_updated_str = data.get("last_updated")
-        last_updated_dt = None
-        if last_updated_str:
-            try:
-                last_updated_dt = datetime.strptime(
-                    last_updated_str, "%Y-%m-%d %H:%M:%S"
-                )
-            except (ValueError, TypeError):
-                pass  # Keep it as None if parsing fails
-
         instance = cls(
-            id=data["id"],
-            name=data["name"],
-            size=data["size"],
-            folder_id=data["folder_id"],
-            storage=data["storage"],
-            last_updated=last_updated_dt,
-            stream_link=data.get("stream_link"),
-            stream_audio=data.get("stream_audio"),
-            video_codec=data.get("video_codec"),
-            video_height=data.get("video_height"),
-            video_width=data.get("video_width"),
-        )
-        instance._raw = data
-        return instance
-
-
-@dataclass
-class Folder(BaseModel):
-    """Represents a folder within Seedr, which can contain files and other folders."""
-    id: int
-    name: str
-    fullname: str
-    size: int
-    last_update: Optional[datetime]
-    is_shared: bool
-    play_audio: bool
-    play_video: bool
-    folders: List["Folder"] = field(default_factory=list)
-    files: List[File] = field(default_factory=list)
-    torrents: List["Torrent"] = field(default_factory=list)
-    parent_id: Optional[int] = None
-    timestamp: Optional[datetime] = None
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "Folder":
-        """Creates a Folder object from a dictionary, recursively."""
-        sub_folders_data = data.get("folders", [])
-        sub_folders = [cls.from_dict(f) for f in sub_folders_data]
-
-        files_data = data.get("files", [])
-        files = [File.from_dict(f) for f in files_data]
-
-        torrents_data = data.get("torrents", [])
-        torrents = [Torrent.from_dict(t) for t in torrents_data]
-
-        parent_id = data.get("parent_id", data.get("parent"))
-
-        last_updated_str = data.get("last_update", data.get("timestamp"))
-        last_updated_dt = None
-        if last_updated_str:
-            try:
-                # Handle both string and potential integer timestamps
-                if isinstance(last_updated_str, int):
-                    last_updated_dt = datetime.fromtimestamp(last_updated_str)
-                else:
-                    last_updated_dt = datetime.strptime(
-                        last_updated_str, "%Y-%m-%d %H:%M:%S"
-                    )
-            except (ValueError, TypeError):
-                pass  # Keep it as None if parsing fails
-
-        timestamp_str = data.get("timestamp")
-        timestamp_dt = None
-        if timestamp_str:
-            try:
-                if isinstance(timestamp_str, int):
-                    timestamp_dt = datetime.fromtimestamp(timestamp_str)
-                else:
-                    timestamp_dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-            except (ValueError, TypeError):
-                pass
-
-        instance = cls(
-            id=data.get("id") or data.get("folder_id") or 0,
+            file_id=data.get("file_id", 0),
             name=data.get("name", ""),
-            fullname=data.get("fullname", data.get("name", "")),
             size=data.get("size", 0),
-            last_update=last_updated_dt,
-            is_shared=data.get("is_shared", False),
+            folder_id=data.get("folder_id", 0),
+            folder_file_id=data.get("folder_file_id", 0),
+            hash=data.get("hash", ""),
+            last_update=parse_datetime(data.get("last_update")),
             play_audio=data.get("play_audio", False),
             play_video=data.get("play_video", False),
-            folders=sub_folders,
-            files=files,
-            torrents=torrents,
-            parent_id=parent_id,
-            timestamp=timestamp_dt,
+            video_progress=data.get("video_progress"),
+            is_lost=data.get("is_lost", 0),
+            thumb=data.get("thumb"),
         )
         instance._raw = data
         return instance
-
-
-@dataclass
-class FetchFileResult(BaseModel):
-    """Represents the result of fetching a file's download URL."""
-    result: bool
-    url: str
-    name: str
-    size: int
-    code: Optional[int] = None
-
-
-@dataclass
-class DeviceCode(BaseModel):
-    """Represents the codes for device authentication."""
-    expires_in: int
-    interval: int
-    device_code: str
-    user_code: str
-    verification_url: str
-
-
-@dataclass
-class CreateArchiveResult(BaseModel):
-    """Represents the result of creating an archive."""
-    result: bool
-    archive_id: int
-    archive_url: str
-    code: Optional[int] = None
-
-
-@dataclass
-class AccountSettings:
-    """Represents the user's configurable account settings."""
-    allow_remote_access: bool
-    site_language: str
-    subtitles_language: str
-    email_announcements: bool
-    email_newsletter: bool
-
-
-@dataclass
-class AccountInfo:
-    """Represents the user's account status and information."""
-    username: str
-    user_id: int
-    premium: int
-    package_id: int
-    package_name: str
-    space_used: int
-    space_max: int
-    bandwidth_used: int
-    email: str
-    wishlist: list
-    invites: int
-    invites_accepted: int
-    max_invites: int
-
-
-@dataclass
-class UserSettings(BaseModel):
-    """Represents the complete user settings and account information."""
-    settings: AccountSettings
-    account: AccountInfo
-    country: str
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "UserSettings":
-        """Creates a UserSettings object from the API response dictionary."""
-        settings_data = data.get("settings", {})
-        account_data = data.get("account", {})
-
-        instance = cls(
-            settings=AccountSettings(**settings_data),
-            account=AccountInfo(**account_data),
-            country=data.get("country", ""),
-        )
-        instance._raw = data
-        return instance
-
-
-@dataclass
-class Device(BaseModel):
-    """Represents a device connected to the user's account."""
-    client_id: str
-    client_name: str
-    device_code: str
-    tk: str
-
-
-@dataclass
-class MemoryBandwidth(BaseModel):
-    """Represents the user's memory and bandwidth usage."""
-    bandwidth_used: int
-    bandwidth_max: int
-    space_used: int
-    space_max: int
-    is_premium: int
-
-
-@dataclass
-class APIResult(BaseModel):
-    """Represents a generic, simple API result."""
-    result: bool
-    code: Optional[int] = None
-
-
-@dataclass
-class AddTorrentResult(BaseModel):
-    """Represents the result of adding a torrent."""
-    result: bool
-    user_torrent_id: int
-    title: str
-    torrent_hash: str
-    code: Optional[int] = None
 
 
 @dataclass
 class Torrent(BaseModel):
     """Represents a torrent in the user's account."""
+
     id: int
     name: str
     size: int
@@ -286,23 +94,13 @@ class Torrent(BaseModel):
     @classmethod
     def from_dict(cls, data: dict) -> "Torrent":
         """Creates a Torrent object from a dictionary."""
-        last_updated_str = data.get("last_update")
-        last_updated_dt = None
-        if last_updated_str:
-            try:
-                last_updated_dt = datetime.strptime(
-                    last_updated_str, "%Y-%m-%d %H:%M:%S"
-                )
-            except (ValueError, TypeError):
-                pass
-
         instance = cls(
-            id=data["id"],
-            name=data["name"],
-            size=data["size"],
-            hash=data["hash"],
-            progress=data["progress"],
-            last_update=last_updated_dt,
+            id=data.get("id", 0),
+            name=data.get("name", ""),
+            size=data.get("size", 0),
+            hash=data.get("hash", ""),
+            progress=data.get("progress", ""),
+            last_update=parse_datetime(data.get("last_update")),
             folder=data.get("folder", ""),
             download_rate=data.get("download_rate", 0),
             upload_rate=data.get("upload_rate", 0),
@@ -318,3 +116,200 @@ class Torrent(BaseModel):
         )
         instance._raw = data
         return instance
+
+
+@dataclass
+class Folder(BaseModel):
+    """Represents a folder within Seedr, which can contain files and other folders."""
+
+    id: int
+    name: str
+    fullname: str
+    size: int
+    last_update: Optional[datetime]
+    is_shared: bool
+    play_audio: bool
+    play_video: bool
+    folders: List["Folder"] = field(default_factory=list)
+    files: List[File] = field(default_factory=list)
+    torrents: List["Torrent"] = field(default_factory=list)
+    parent: Optional[int] = None
+    timestamp: Optional[datetime] = None
+    indexes: List[Any] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Folder":
+        """Creates a Folder object from a dictionary, recursively."""
+        instance = cls(
+            id=data.get("id") or data.get("folder_id") or 0,
+            name=data.get("name", ""),
+            fullname=data.get("fullname", data.get("name", "")),
+            size=data.get("size", 0),
+            last_update=parse_datetime(data.get("last_update") or data.get("timestamp")),
+            is_shared=data.get("is_shared", False),
+            play_audio=data.get("play_audio", False),
+            play_video=data.get("play_video", False),
+            folders=[Folder.from_dict(f) for f in data.get("folders", [])],
+            files=[File.from_dict(f) for f in data.get("files", [])],
+            torrents=[Torrent.from_dict(t) for t in data.get("torrents", [])],
+            parent=data.get("parent"),
+            timestamp=parse_datetime(data.get("timestamp")),
+            indexes=data.get("indexes", []),
+        )
+        instance._raw = data
+        return instance
+
+
+@dataclass
+class ListContentsResult(Folder):
+    """Represents the result of listing folder contents, including account metadata."""
+
+    space_used: int = 0
+    space_max: int = 0
+    saw_walkthrough: int = 0
+    type: str = ""
+    t: List[datetime] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ListContentsResult":
+        """Creates a ListContentsResult directly from the API response."""
+        folder = Folder.from_dict(data)
+        instance = cls(
+            id=folder.id,
+            name=folder.name,
+            fullname=folder.fullname,
+            size=folder.size,
+            last_update=folder.last_update,
+            is_shared=folder.is_shared,
+            play_audio=folder.play_audio,
+            play_video=folder.play_video,
+            folders=folder.folders,
+            files=folder.files,
+            torrents=folder.torrents,
+            parent=folder.parent,
+            timestamp=folder.timestamp,
+            indexes=folder.indexes,
+            space_used=data.get("space_used", 0),
+            space_max=data.get("space_max", 0),
+            saw_walkthrough=data.get("saw_walkthrough", 0),
+            type=data.get("type", ""),
+            t=[parse_datetime(ts) for ts in data.get("t", [])],
+        )
+        instance._raw = data
+        return instance
+
+
+# --- Other API Result Models ---
+
+
+@dataclass
+class FetchFileResult(BaseModel):
+    result: bool
+    url: str
+    name: str
+    size: int
+    code: Optional[int] = None
+
+
+@dataclass
+class DeviceCode(BaseModel):
+    expires_in: int
+    interval: int
+    device_code: str
+    user_code: str
+    verification_url: str
+
+
+@dataclass
+class CreateArchiveResult(BaseModel):
+    result: bool
+    archive_id: int
+    archive_url: str
+    code: Optional[int] = None
+
+
+@dataclass
+class AccountSettings(BaseModel):
+    """Represents the nested 'settings' object in the user settings response."""
+
+    allow_remote_access: bool
+    site_language: str
+    subtitles_language: str
+    email_announcements: bool
+    email_newsletter: bool
+
+
+@dataclass
+class AccountInfo(BaseModel):
+    """Represents the nested 'account' object in the user settings response."""
+
+    username: str
+    user_id: int
+    premium: int
+    package_id: int
+    package_name: str
+    space_used: int
+    space_max: int
+    bandwidth_used: int
+    email: str
+    wishlist: list
+    invites: int
+    invites_accepted: int
+    max_invites: int
+
+
+@dataclass
+class UserSettings(BaseModel):
+    """Represents the complete response from the get_settings endpoint."""
+
+    result: bool
+    code: int
+    settings: AccountSettings
+    account: AccountInfo
+    country: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "UserSettings":
+        """Creates a UserSettings object from the nested API response."""
+        instance = cls(
+            result=data.get("result", False),
+            code=data.get("code", 0),
+            settings=AccountSettings.from_dict(data.get("settings", {})),
+            account=AccountInfo.from_dict(data.get("account", {})),
+            country=data.get("country", ""),
+        )
+        instance._raw = data
+        return instance
+
+
+@dataclass
+class Device(BaseModel):
+    client_id: str
+    client_name: str
+    device_code: str
+    tk: str
+
+
+@dataclass
+class MemoryBandwidth(BaseModel):
+    bandwidth_used: int
+    bandwidth_max: int
+    space_used: int
+    space_max: int
+    is_premium: int
+
+
+@dataclass
+class APIResult(BaseModel):
+    result: bool
+    code: Optional[int] = None
+
+
+@dataclass
+class AddTorrentResult(BaseModel):
+    result: bool
+    user_torrent_id: int
+    title: str
+    torrent_hash: str
+    code: Optional[int] = None
+

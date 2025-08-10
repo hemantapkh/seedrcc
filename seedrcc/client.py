@@ -383,7 +383,7 @@ class Seedr:
         response_data = self._request("post", "fetch_file", data={"folder_file_id": file_id})
         return models.FetchFileResult.from_dict(response_data)
 
-    def list_contents(self, folder_id: str = "0", content_type: str = "folder") -> models.Folder:
+    def list_contents(self, folder_id: str = "0", content_type: str = "folder") -> models.ListContentsResult:
         """
         List the contents of a folder.
 
@@ -397,7 +397,7 @@ class Seedr:
         """
         data = {"content_type": content_type, "content_id": folder_id}
         response_data = self._request("post", "list_contents", data=data)
-        return models.Folder.from_dict(response_data)
+        return models.ListContentsResult.from_dict(response_data)
 
     def rename_file(self, file_id: str, rename_to: str) -> models.APIResult:
         """
