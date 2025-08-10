@@ -5,16 +5,6 @@ import httpx
 from . import _constants
 
 
-def get_device_code(client: httpx.Client) -> Dict[str, Any]:
-    """
-    Fetches a device and user code for the device auth flow.
-    """
-    params = {"client_id": _constants.DEVICE_CLIENT_ID}
-    response = client.get(_constants.DEVICE_CODE_URL, params=params)
-    response.raise_for_status()
-    return response.json()
-
-
 def authorize_device(client: httpx.Client, device_code: str) -> Dict[str, Any]:
     """
     Exchanges a device code for access and refresh tokens.
