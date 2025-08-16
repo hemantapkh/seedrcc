@@ -1,36 +1,32 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "seedrcc"
 version = "2.0.0"
-authors = [
-  { name="Hemanta Pokharel", email="hemantapkh@yahoo.com" },
-]
+authors = [{ name = "Hemanta Pokharel", email = "yo@hemantapkh.com" }]
 description = "Complete Python API wrapper of seedr.cc"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { file="LICENSE" }
+license = { file = "LICENSE" }
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Topic :: Internet",
-    "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Utilities",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Internet",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
 ]
-dependencies = [
-    "httpx",
-]
+dependencies = ["anyio", "httpx"]
 
 [project.urls]
 "Homepage" = "https://github.com/hemantapkh/seedrcc"
 "Documentation" = "https://seedrcc.readthedocs.io/en/latest/"
 "Bug Tracker" = "https://github.com/hemantapkh/seedrcc/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 120
