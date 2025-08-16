@@ -13,7 +13,7 @@ class Seedr(BaseClient):
     Synchronous client for interacting with the Seedr API.
 
     This client provides access to all the API endpoints and handles authentication.
-    You can use one of the factory class methods to create an instance:
+    It is recommended to use one of the factory class methods to create an instance:
     - `Seedr.from_password()`
     - `Seedr.from_device_code()`
     - `Seedr.from_refresh_token()`
@@ -21,30 +21,36 @@ class Seedr(BaseClient):
     Initializing with an existing token:
         If you have a previously saved token, you can initialize the client directly.
 
-        >>> from seedrcc import Seedr, Token
-        >>>
-        >>> # Load your token data (e.g., from a file or database)
-        >>> token_data = {"access_token": "...", "refresh_token": "..."}
-        >>> token = Token.from_dict(token_data)
-        >>>
-        >>> client = Seedr(token=token)
-        >>> # You can now make authenticated requests
-        >>> print(client.get_settings().account.username)
+        ```python
+        from seedrcc import Seedr, Token
+
+        # Load your token data (e.g., from a file or database)
+        token_data = {"access_token": "...", "refresh_token": "..."}
+        token = Token.from_dict(token_data)
+
+        client = Seedr(token=token)
+        # You can now make authenticated requests
+        print(client.get_settings().account.username)
+        ```
 
     Using a custom `httpx.Client`:
         For advanced configuration (e.g., custom timeouts, proxies, headers),
         you can pass your own `httpx.Client` instance.
 
-        >>> import httpx
-        >>>
-        >>> my_httpx_client = httpx.Client(timeout=30.0)
-        >>> client = Seedr.from_password("user", "pass", httpx_client=my_httpx_client)
+        ```python
+        import httpx
+
+        my_httpx_client = httpx.Client(timeout=30.0)
+        client = Seedr.from_password("user", "pass", httpx_client=my_httpx_client)
+        ```
 
     Using `httpx` keyword arguments:
         For simpler customizations, you can pass `httpx.Client` arguments directly
         to the factory methods.
 
-        >>> client = Seedr.from_password("user", "pass", timeout=30.0)
+        ```python
+        client = Seedr.from_password("user", "pass", timeout=30.0)
+        ```
     """
 
     _client: httpx.Client
@@ -65,14 +71,16 @@ class Seedr(BaseClient):
             self._client = httpx.Client(**httpx_kwargs)
             self._manages_client_lifecycle = True
 
+    # Public Properties
     @property
     def token(self) -> Token:
         return super().token
 
+    # Public Class Methods (Factories)
     @staticmethod
     def get_device_code() -> models.DeviceCode:
         """
-        Get the device and user codes required for authorization.
+        Gets the device and user codes required for authorization.
 
         This is the first step in the device authentication flow.
 
@@ -80,9 +88,12 @@ class Seedr(BaseClient):
             A `DeviceCode` object containing the codes needed for the next step.
 
         Example:
-            >>> from seedrcc import Seedr
-            >>> codes = Seedr.get_device_code()
-            >>> print(f"Go to {codes.verification_url} and enter {codes.user_code}")
+            ```python
+            from seedrcc import Seedr
+            
+            codes = Seedr.get_device_code()
+            print(f"Go to {codes.verification_url} and enter {codes.user_code}")
+            ```
         """
         params = {"client_id": _constants.DEVICE_CLIENT_ID}
         with httpx.Client() as client:
@@ -101,7 +112,7 @@ class Seedr(BaseClient):
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """
-        Create a new client by authenticating with a username and password.
+        Creates a new client by authenticating with a username and password.
 
         Args:
             username: The user's Seedr username (email).
@@ -116,14 +127,18 @@ class Seedr(BaseClient):
             An initialized `Seedr` client instance.
 
         Example:
-            >>> client = Seedr.from_password("your_email@example.com", "your_password")
+            ```python
+            client = Seedr.from_password("your_email@example.com", "your_password")
+            ```
         """
 
         def auth_callable(client: httpx.Client) -> Dict[str, Any]:
             data = _utils.prepare_password_payload(username, password)
             return cls._perform_auth_request(client, "post", _constants.TOKEN_URL, "Authentication failed", data=data)
 
-        return cls._create_client_from_auth(auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs)
+        return cls._create_client_from_auth(
+            auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs
+        )
 
     @classmethod
     def from_device_code(
@@ -134,7 +149,7 @@ class Seedr(BaseClient):
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """
-        Create a new client by authorizing with a device code.
+        Creates a new client by authorizing with a device code.
 
         This is the second step in the device authentication flow, after getting the
         codes from `Seedr.get_device_code()`.
@@ -151,7 +166,9 @@ class Seedr(BaseClient):
             An initialized `Seedr` client instance.
 
         Example:
-            >>> client = Seedr.from_device_code("your_device_code")
+            ```python
+            client = Seedr.from_device_code("your_device_code")
+            ```
         """
 
         def auth_callable(client: httpx.Client) -> Dict[str, Any]:
@@ -177,7 +194,7 @@ class Seedr(BaseClient):
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """
-        Create a new client by using an existing refresh token.
+        Creates a new client by using an existing refresh token.
 
         Args:
             refresh_token: A valid refresh token.
@@ -191,7 +208,9 @@ class Seedr(BaseClient):
             An initialized `Seedr` client instance.
 
         Example:
-            >>> client = Seedr.from_refresh_token("your_refresh_token")
+            ```python
+            client = Seedr.from_refresh_token("your_refresh_token")
+            ```
         """
 
         def auth_callable(client: httpx.Client) -> Dict[str, Any]:
@@ -206,9 +225,10 @@ class Seedr(BaseClient):
             **httpx_kwargs,
         )
 
+    # Public Instance Methods (Core API Logic)
     def refresh_token(self) -> models.RefreshTokenResult:
         """
-        Manually refreshe the access token.
+        Manually refreshes the access token.
 
         This is useful if you want to proactively manage the token's lifecycle
         instead of waiting for an automatic refresh on an API call.
@@ -217,11 +237,13 @@ class Seedr(BaseClient):
             The result of the token refresh operation.
 
         Example:
-            >>> try:
-            ...     result = client.refresh_token()
-            ...     print(f"Token successfully refreshed. New token expires in {result.expires_in} seconds.")
-            ... except AuthenticationError as e:
-            ...     print(f"Failed to refresh token: {e}")
+            ```python
+            try:
+                result = client.refresh_token()
+                print(f"Token successfully refreshed. New token expires in {result.expires_in} seconds.")
+            except AuthenticationError as e:
+                print(f"Failed to refresh token: {e}")
+            ```
         """
         return self._perform_token_refresh()
 
@@ -233,8 +255,10 @@ class Seedr(BaseClient):
             An object containing the user's account settings.
 
         Example:
-            >>> settings = client.get_settings()
-            >>> print(settings.account.username)
+            ```python
+            settings = client.get_settings()
+            print(settings.account.username)
+            ```
         """
         response_data = self._request("get", "get_settings")
         return models.UserSettings.from_dict(response_data)
@@ -247,8 +271,10 @@ class Seedr(BaseClient):
             An object containing memory and bandwidth details.
 
         Example:
-            >>> usage = client.get_memory_bandwidth()
-            >>> print(f"Space used: {usage.space_used}/{usage.space_max}")
+            ```python
+            usage = client.get_memory_bandwidth()
+            print(f"Space used: {usage.space_used}/{usage.space_max}")
+            ```
         """
         response_data = self._request("get", "get_memory_bandwidth")
         return models.MemoryBandwidth.from_dict(response_data)
@@ -264,8 +290,10 @@ class Seedr(BaseClient):
             An object containing the contents of the folder.
 
         Example:
-            >>> response = client.list_contents()
-            >>> print(response)
+            ```python
+            response = client.list_contents()
+            print(response)
+            ```
         """
         data = _utils.prepare_list_contents_payload(folder_id)
         response_data = self._request("post", "list_contents", data=data)
@@ -291,13 +319,15 @@ class Seedr(BaseClient):
             An object containing the result of the add torrent operation.
 
         Example:
-            >>> # Add by magnet link
-            >>> result = client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
-            >>> print(result.title)
-            >>>
-            >>> # Add from a local .torrent file
-            >>> result = client.add_torrent(torrent_file="/path/to/your/file.torrent")
-            >>> print(result.title)
+            ```python
+            # Add by magnet link
+            result = client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
+            print(result.title)
+            
+            # Add from a local .torrent file
+            result = client.add_torrent(torrent_file="/path/to/your/file.torrent")
+            print(result.title)
+            ```
         """
         data = _utils.prepare_add_torrent_payload(magnet_link, wishlist_id, folder_id)
         files = {}
@@ -318,9 +348,11 @@ class Seedr(BaseClient):
             A list of torrents found on the page.
 
         Example:
-            >>> torrents = client.scan_page(url='some_torrent_page_url')
-            >>> for torrent in torrents:
-            ...     print(torrent.name)
+            ```python
+            torrents = client.scan_page(url='some_torrent_page_url')
+            for torrent in torrents:
+                print(torrent.name)
+            ```
         """
         data = _utils.prepare_scan_page_payload(url)
         response_data = self._request("post", "scan_page", data=data)
@@ -338,8 +370,10 @@ class Seedr(BaseClient):
             An object containing the file details and download URL.
 
         Example:
-            >>> result = client.fetch_file(file_id='12345')
-            >>> print(f"Download URL: {result.url}")
+            ```python
+            result = client.fetch_file(file_id='12345')
+            print(f"Download URL: {result.url}")
+            ```
         """
         data = _utils.prepare_fetch_file_payload(file_id)
         response_data = self._request("post", "fetch_file", data=data)
@@ -356,8 +390,10 @@ class Seedr(BaseClient):
             An object containing the result of the archive creation.
 
         Example:
-            >>> result = client.create_archive(folder_id='12345')
-            >>> print(f"Archive URL: {result.archive_url}")
+            ```python
+            result = client.create_archive(folder_id='12345')
+            print(f"Archive URL: {result.archive_url}")
+            ```
         """
         data = _utils.prepare_create_archive_payload(folder_id)
         response_data = self._request("post", "create_empty_archive", data=data)
@@ -374,9 +410,11 @@ class Seedr(BaseClient):
             An object containing the search results.
 
         Example:
-            >>> results = client.search_files(query='harry potter')
-            >>> for f in results.folders:
-            ...     print(f"Found folder: {f.name}")
+            ```python
+            results = client.search_files(query='harry potter')
+            for f in results.folders:
+                print(f"Found folder: {f.name}")
+            ```
         """
         data = _utils.prepare_search_files_payload(query)
         response_data = self._request("post", "search_files", data=data)
@@ -393,9 +431,11 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> result = client.add_folder(name='New Folder')
-            >>> if result.result:
-            ...     print("Folder created successfully.")
+            ```python
+            result = client.add_folder(name='New Folder')
+            if result.result:
+                print("Folder created successfully.")
+            ```
         """
         data = _utils.prepare_add_folder_payload(name)
         response_data = self._request("post", "add_folder", data=data)
@@ -413,9 +453,11 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> result = client.rename_file(file_id='12345', rename_to='newName')
-            >>> if result.result:
-            ...     print("File renamed successfully.")
+            ```python
+            result = client.rename_file(file_id='12345', rename_to='newName')
+            if result.result:
+                print("File renamed successfully.")
+            ```
         """
         data = _utils.prepare_rename_payload(rename_to, file_id=file_id)
         response_data = self._request("post", "rename", data=data)
@@ -433,9 +475,11 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> result = client.rename_folder(folder_id='12345', rename_to='newName')
-            >>> if result.result:
-            ...     print("Folder renamed successfully.")
+            ```python
+            result = client.rename_folder(folder_id='12345', rename_to='newName')
+            if result.result:
+                print("Folder renamed successfully.")
+            ```
         """
         data = _utils.prepare_rename_payload(rename_to, folder_id=folder_id)
         response_data = self._request("post", "rename", data=data)
@@ -452,8 +496,10 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> response = client.delete_file(file_id='12345')
-            >>> print(response)
+            ```python
+            response = client.delete_file(file_id='12345')
+            print(response)
+            ```
         """
         return self._delete_item("file", file_id)
 
@@ -468,8 +514,10 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> response = client.delete_folder(folder_id='12345')
-            >>> print(response)
+            ```python
+            response = client.delete_folder(folder_id='12345')
+            print(response)
+            ```
         """
         return self._delete_item("folder", folder_id)
 
@@ -484,8 +532,10 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> response = client.delete_torrent(torrent_id='12345')
-            >>> print(response)
+            ```python
+            response = client.delete_torrent(torrent_id='12345')
+            print(response)
+            ```
         """
         return self._delete_item("torrent", torrent_id)
 
@@ -500,7 +550,9 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> result = client.delete_wishlist(wishlist_id='12345')
+            ```python
+            result = client.delete_wishlist(wishlist_id='12345')
+            ```
         """
         data = _utils.prepare_remove_wishlist_payload(wishlist_id)
         response_data = self._request("post", "remove_wishlist", data=data)
@@ -514,9 +566,11 @@ class Seedr(BaseClient):
             A list of devices connected to the account.
 
         Example:
-            >>> devices = client.get_devices()
-            >>> for device in devices:
-            ...     print(device.client_name)
+            ```python
+            devices = client.get_devices()
+            for device in devices:
+                print(device.client_name)
+            ```
         """
         response_data = self._request("get", "get_devices")
         devices_data = response_data.get("devices", [])
@@ -534,7 +588,9 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> result = client.change_name(name='New Name', password='password')
+            ```python
+            result = client.change_name(name='New Name', password='password')
+            ```
         """
         data = _utils.prepare_change_name_payload(name, password)
         response_data = self._request("post", "user_account_modify", data=data)
@@ -552,12 +608,15 @@ class Seedr(BaseClient):
             An object indicating the result of the operation.
 
         Example:
-            >>> result = client.change_password(old_password='old', new_password='new')
+            ```python
+            result = client.change_password(old_password='old', new_password='new')
+            ```
         """
         data = _utils.prepare_change_password_payload(old_password, new_password)
         response_data = self._request("post", "user_account_modify", data=data)
         return models.APIResult.from_dict(response_data)
 
+    # Private Helper Methods
     def _request(
         self, http_method: str, func: str, files: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> Dict[str, Any]:
@@ -677,6 +736,7 @@ class Seedr(BaseClient):
         except APIError as e:
             raise AuthenticationError(error_message, response=e.response) from e
 
+    # Dunder Methods (Context Management)
     def close(self) -> None:
         if self._manages_client_lifecycle:
             self._client.close()
