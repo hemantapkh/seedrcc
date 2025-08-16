@@ -1,13 +1,12 @@
 from . import exceptions, models
-from .auth import get_device_code
+from .async_client import AsyncSeedr
 from .client import Seedr
 from .token import Token
 
 __all__ = [
     "Seedr",
+    "AsyncSeedr",
     "Token",
-    "get_device_code",
     "models",
     "exceptions",
 ]
-
