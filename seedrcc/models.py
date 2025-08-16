@@ -19,6 +19,7 @@ __all__ = [
     "MemoryBandwidth",
     "AddTorrentResult",
     "APIResult",
+    "RefreshTokenResult",
 ]
 
 
@@ -262,6 +263,8 @@ class UserSettings(_BaseModel):
 
 @dataclass
 class AddTorrentResult(_BaseModel):
+    """Represents the result of adding a torrent."""
+
     result: bool
     user_torrent_id: int
     title: str
@@ -271,6 +274,8 @@ class AddTorrentResult(_BaseModel):
 
 @dataclass
 class CreateArchiveResult(_BaseModel):
+    """Represents the result of a request to create an archive."""
+
     result: bool
     archive_id: int
     archive_url: str
@@ -279,6 +284,8 @@ class CreateArchiveResult(_BaseModel):
 
 @dataclass
 class Device(_BaseModel):
+    """Represents a device connected to the user's account."""
+
     client_id: str
     client_name: str
     device_code: str
@@ -287,6 +294,8 @@ class Device(_BaseModel):
 
 @dataclass
 class DeviceCode(_BaseModel):
+    """Represents the codes used in the device authentication flow."""
+
     expires_in: int
     interval: int
     device_code: str
@@ -296,6 +305,8 @@ class DeviceCode(_BaseModel):
 
 @dataclass
 class FetchFileResult(_BaseModel):
+    """Represents the result of a request to fetch a file, including the download URL."""
+
     result: bool
     url: str
     name: str
@@ -305,6 +316,8 @@ class FetchFileResult(_BaseModel):
 
 @dataclass
 class MemoryBandwidth(_BaseModel):
+    """Represents the user's memory and bandwidth usage details."""
+
     bandwidth_used: int
     bandwidth_max: int
     space_used: int
@@ -314,5 +327,17 @@ class MemoryBandwidth(_BaseModel):
 
 @dataclass
 class APIResult(_BaseModel):
+    """Represents a generic API result for operations that return a simple success/failure."""
+
     result: bool
     code: Optional[int] = None
+
+
+@dataclass
+class RefreshTokenResult(_BaseModel):
+    """Represents the response from a token refresh."""
+
+    access_token: str
+    expires_in: int
+    token_type: str
+    scope: Optional[str] = None
