@@ -1,0 +1,40 @@
+site_name: seedrcc
+theme:
+  name: material
+  logo: images/seedrpy.png
+  favicon: images/seedrpy.png
+  features:
+    - content.code.copy
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: true
+nav:
+  - "Home": "index.md"
+  - "API Reference":
+    - "Synchronous Client": "sync_client.md"
+    - "Asynchronous Client": "async_client.md"
+    - "Data Models": "models.md"
+    - "Exceptions": "exceptions.md"
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
