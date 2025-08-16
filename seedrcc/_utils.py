@@ -58,3 +58,9 @@ def prepare_add_torrent_payload(
         "wishlist_id": wishlist_id,
         "folder_id": folder_id,
     }
+
+
+def read_file_bytes(path: str) -> bytes:
+    """Reads a local file and returns its content as bytes."""
+    with open(path, "rb") as f:
+        return f.read()
