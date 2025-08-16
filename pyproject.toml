@@ -10,7 +10,7 @@ authors = [
 ]
 description = "Complete Python API wrapper of seedr.cc"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = { file="LICENSE" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
