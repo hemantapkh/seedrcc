@@ -90,7 +90,7 @@ class Seedr(BaseClient):
         Example:
             ```python
             from seedrcc import Seedr
-            
+
             codes = Seedr.get_device_code()
             print(f"Go to {codes.verification_url} and enter {codes.user_code}")
             ```
@@ -136,9 +136,7 @@ class Seedr(BaseClient):
             data = _utils.prepare_password_payload(username, password)
             return cls._perform_auth_request(client, "post", _constants.TOKEN_URL, "Authentication failed", data=data)
 
-        return cls._create_client_from_auth(
-            auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs
-        )
+        return cls._create_client_from_auth(auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs)
 
     @classmethod
     def from_device_code(
@@ -323,7 +321,7 @@ class Seedr(BaseClient):
             # Add by magnet link
             result = client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
             print(result.title)
-            
+
             # Add from a local .torrent file
             result = client.add_torrent(torrent_file="/path/to/your/file.torrent")
             print(result.title)
@@ -635,7 +633,7 @@ class Seedr(BaseClient):
                 params["access_token"] = self._token.access_token
                 data = self._execute_request(self._client, http_method, url, params=params, files=files, **kwargs)
 
-            if isinstance(data, dict) and data.get("result") is not True and "access_token" not in data:
+            if isinstance(data, dict) and data.get("result", True) is not True:
                 raise APIError(data.get("error", "Unknown API error"))
 
             return data
@@ -746,3 +744,4 @@ class Seedr(BaseClient):
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
+
