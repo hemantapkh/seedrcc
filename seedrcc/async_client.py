@@ -32,7 +32,7 @@ class AsyncSeedr(BaseClient):
 
         client = AsyncSeedr(token=token)
         # You can now make authenticated requests
-        # settings = await client.get_settings()
+        settings = await client.get_settings()
         ```
 
     Using a custom `httpx.AsyncClient`:
@@ -133,14 +133,14 @@ class AsyncSeedr(BaseClient):
         """
 
         async def auth_callable(client: httpx.AsyncClient) -> Dict[str, Any]:
+            """Prepare and execute the authentication request."""
             data = _utils.prepare_password_payload(username, password)
-            return await cls._perform_auth_request(
-                client, "post", _constants.TOKEN_URL, "Authentication failed", data=data
-            )
+            try:
+                return await cls._make_http_request(client, "post", _constants.TOKEN_URL, data=data)
+            except APIError as e:
+                raise AuthenticationError("Authentication failed", response=e.response) from e
 
-        return await cls._create_client_from_auth(
-            auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs
-        )
+        return await cls._initialize_client(auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs)
 
     @classmethod
     async def from_device_code(
@@ -174,12 +174,14 @@ class AsyncSeedr(BaseClient):
         """
 
         async def auth_callable(client: httpx.AsyncClient) -> Dict[str, Any]:
+            """Prepare and execute the device authorization request."""
             params = _utils.prepare_device_code_params(device_code)
-            return await cls._perform_auth_request(
-                client, "get", _constants.DEVICE_AUTHORIZE_URL, "Failed to authorize device", params=params
-            )
+            try:
+                return await cls._make_http_request(client, "get", _constants.DEVICE_AUTHORIZE_URL, params=params)
+            except APIError as e:
+                raise AuthenticationError("Failed to authorize device", response=e.response) from e
 
-        return await cls._create_client_from_auth(
+        return await cls._initialize_client(
             auth_callable,
             lambda r: {"device_code": device_code},
             on_token_refresh,
@@ -216,12 +218,14 @@ class AsyncSeedr(BaseClient):
         """
 
         async def auth_callable(client: httpx.AsyncClient) -> Dict[str, Any]:
+            """Prepare and execute the token refresh request."""
             data = _utils.prepare_refresh_token_payload(refresh_token)
-            return await cls._perform_auth_request(
-                client, "post", _constants.TOKEN_URL, "Failed to refresh token", data=data
-            )
+            try:
+                return await cls._make_http_request(client, "post", _constants.TOKEN_URL, data=data)
+            except APIError as e:
+                raise AuthenticationError("Failed to refresh token", response=e.response) from e
 
-        return await cls._create_client_from_auth(
+        return await cls._initialize_client(
             auth_callable,
             lambda r: {"refresh_token": refresh_token},
             on_token_refresh,
@@ -229,6 +233,7 @@ class AsyncSeedr(BaseClient):
             **httpx_kwargs,
         )
 
+    # Public Instance Methods (Core API Logic)
     async def refresh_token(self) -> models.RefreshTokenResult:
         """
         Manually refreshes the access token.
@@ -248,7 +253,7 @@ class AsyncSeedr(BaseClient):
                 print(f"Failed to refresh token: {e}")
             ```
         """
-        return await self._perform_token_refresh()
+        return await self._refresh_access_token()
 
     async def get_settings(self) -> models.UserSettings:
         """
@@ -263,7 +268,7 @@ class AsyncSeedr(BaseClient):
             print(settings.account.username)
             ```
         """
-        response_data = await self._request("get", "get_settings")
+        response_data = await self._api_request("get", "get_settings")
         return models.UserSettings.from_dict(response_data)
 
     async def get_memory_bandwidth(self) -> models.MemoryBandwidth:
@@ -279,7 +284,7 @@ class AsyncSeedr(BaseClient):
             print(f"Space used: {usage.space_used}/{usage.space_max}")
             ```
         """
-        response_data = await self._request("get", "get_memory_bandwidth")
+        response_data = await self._api_request("get", "get_memory_bandwidth")
         return models.MemoryBandwidth.from_dict(response_data)
 
     async def list_contents(self, folder_id: str = "0") -> models.ListContentsResult:
@@ -299,7 +304,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_list_contents_payload(folder_id)
-        response_data = await self._request("post", "list_contents", data=data)
+        response_data = await self._api_request("post", "list_contents", data=data)
         return models.ListContentsResult.from_dict(response_data)
 
     async def add_torrent(
@@ -335,9 +340,9 @@ class AsyncSeedr(BaseClient):
         data = _utils.prepare_add_torrent_payload(magnet_link, wishlist_id, folder_id)
         files = {}
         if torrent_file:
-            files = await self._handle_torrent_file_async(torrent_file)
+            files = await self._read_torrent_file_async(torrent_file)
 
-        response_data = await self._request("post", "add_torrent", data=data, files=files)
+        response_data = await self._api_request("post", "add_torrent", data=data, files=files)
         return models.AddTorrentResult.from_dict(response_data)
 
     async def scan_page(self, url: str) -> List[models.Torrent]:
@@ -358,7 +363,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_scan_page_payload(url)
-        response_data = await self._request("post", "scan_page", data=data)
+        response_data = await self._api_request("post", "scan_page", data=data)
         torrents_data = response_data.get("torrents", [])
         return [models.Torrent.from_dict(t) for t in torrents_data]
 
@@ -379,7 +384,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_fetch_file_payload(file_id)
-        response_data = await self._request("post", "fetch_file", data=data)
+        response_data = await self._api_request("post", "fetch_file", data=data)
         return models.FetchFileResult.from_dict(response_data)
 
     async def create_archive(self, folder_id: str) -> models.CreateArchiveResult:
@@ -399,7 +404,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_create_archive_payload(folder_id)
-        response_data = await self._request("post", "create_empty_archive", data=data)
+        response_data = await self._api_request("post", "create_empty_archive", data=data)
         return models.CreateArchiveResult.from_dict(response_data)
 
     async def search_files(self, query: str) -> models.Folder:
@@ -420,7 +425,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_search_files_payload(query)
-        response_data = await self._request("post", "search_files", data=data)
+        response_data = await self._api_request("post", "search_files", data=data)
         return models.Folder.from_dict(response_data)
 
     async def add_folder(self, name: str) -> models.APIResult:
@@ -441,7 +446,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_add_folder_payload(name)
-        response_data = await self._request("post", "add_folder", data=data)
+        response_data = await self._api_request("post", "add_folder", data=data)
         return models.APIResult.from_dict(response_data)
 
     async def rename_file(self, file_id: str, rename_to: str) -> models.APIResult:
@@ -463,7 +468,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_rename_payload(rename_to, file_id=file_id)
-        response_data = await self._request("post", "rename", data=data)
+        response_data = await self._api_request("post", "rename", data=data)
         return models.APIResult.from_dict(response_data)
 
     async def rename_folder(self, folder_id: str, rename_to: str) -> models.APIResult:
@@ -485,7 +490,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_rename_payload(rename_to, folder_id=folder_id)
-        response_data = await self._request("post", "rename", data=data)
+        response_data = await self._api_request("post", "rename", data=data)
         return models.APIResult.from_dict(response_data)
 
     async def delete_file(self, file_id: str) -> models.APIResult:
@@ -504,7 +509,7 @@ class AsyncSeedr(BaseClient):
             print(response)
             ```
         """
-        return await self._delete_item("file", file_id)
+        return await self._delete_api_item("file", file_id)
 
     async def delete_folder(self, folder_id: str) -> models.APIResult:
         """
@@ -522,7 +527,7 @@ class AsyncSeedr(BaseClient):
             print(response)
             ```
         """
-        return await self._delete_item("folder", folder_id)
+        return await self._delete_api_item("folder", folder_id)
 
     async def delete_torrent(self, torrent_id: str) -> models.APIResult:
         """
@@ -540,7 +545,7 @@ class AsyncSeedr(BaseClient):
             print(response)
             ```
         """
-        return await self._delete_item("torrent", torrent_id)
+        return await self._delete_api_item("torrent", torrent_id)
 
     async def delete_wishlist(self, wishlist_id: str) -> models.APIResult:
         """
@@ -558,7 +563,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_remove_wishlist_payload(wishlist_id)
-        response_data = await self._request("post", "remove_wishlist", data=data)
+        response_data = await self._api_request("post", "remove_wishlist", data=data)
         return models.APIResult.from_dict(response_data)
 
     async def get_devices(self) -> List[models.Device]:
@@ -575,7 +580,7 @@ class AsyncSeedr(BaseClient):
                 print(device.client_name)
             ```
         """
-        response_data = await self._request("get", "get_devices")
+        response_data = await self._api_request("get", "get_devices")
         devices_data = response_data.get("devices", [])
         return [models.Device.from_dict(d) for d in devices_data]
 
@@ -596,7 +601,7 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_change_name_payload(name, password)
-        response_data = await self._request("post", "user_account_modify", data=data)
+        response_data = await self._api_request("post", "user_account_modify", data=data)
         return models.APIResult.from_dict(response_data)
 
     async def change_password(self, old_password: str, new_password: str) -> models.APIResult:
@@ -616,12 +621,13 @@ class AsyncSeedr(BaseClient):
             ```
         """
         data = _utils.prepare_change_password_payload(old_password, new_password)
-        response_data = await self._request("post", "user_account_modify", data=data)
+        response_data = await self._api_request("post", "user_account_modify", data=data)
         return models.APIResult.from_dict(response_data)
 
-    async def _request(
+    async def _api_request(
         self, http_method: str, func: str, files: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> Dict[str, Any]:
+        """Handles the core logic for making authenticated API requests, including token refreshes."""
         url = kwargs.pop("url", _constants.RESOURCE_URL)
         params = kwargs.pop("params", {})
         if "access_token" not in params:
@@ -630,14 +636,16 @@ class AsyncSeedr(BaseClient):
             params["func"] = func
 
         try:
-            data = await self._execute_request(self._client, http_method, url, params=params, files=files, **kwargs)
+            data = await self._make_http_request(self._client, http_method, url, params=params, files=files, **kwargs)
 
             if isinstance(data, dict) and data.get("error") == "expired_token":
-                await self._perform_token_refresh()
+                await self._refresh_access_token()
                 params["access_token"] = self._token.access_token
-                data = await self._execute_request(self._client, http_method, url, params=params, files=files, **kwargs)
+                data = await self._make_http_request(
+                    self._client, http_method, url, params=params, files=files, **kwargs
+                )
 
-            if isinstance(data, dict) and data.get("result", True) is not True:
+            if isinstance(data, dict) and data.get("result") is not True and "access_token" not in data:
                 raise APIError(data.get("error", "Unknown API error"))
 
             return data
@@ -646,13 +654,14 @@ class AsyncSeedr(BaseClient):
                 raise AuthenticationError("Invalid or expired token.", response=e.response) from e
             raise
 
-    async def _perform_token_refresh(self) -> models.RefreshTokenResult:
+    async def _refresh_access_token(self) -> models.RefreshTokenResult:
+        """Refreshes the access token using the refresh token or device code."""
         if self._token.refresh_token:
             data = _utils.prepare_refresh_token_payload(self._token.refresh_token)
-            response = await self._request("post", "", data=data, url=_constants.TOKEN_URL)
+            response = await self._api_request("post", "", data=data, url=_constants.TOKEN_URL)
         elif self._token.device_code:
             params = _utils.prepare_device_code_params(self._token.device_code)
-            response = await self._request("get", "", params=params, url=_constants.DEVICE_AUTHORIZE_URL)
+            response = await self._api_request("get", "", params=params, url=_constants.DEVICE_AUTHORIZE_URL)
         else:
             raise AuthenticationError("Session expired. No refresh token or device code available.")
 
@@ -664,11 +673,12 @@ class AsyncSeedr(BaseClient):
             if inspect.iscoroutinefunction(self._on_token_refresh):
                 await self._on_token_refresh(self._token)
             else:
-                await anyio.to_thread.run_sync(self._on_token_refresh, self._token)
+                anyio.to_thread.run_sync(self._on_token_refresh, self._token)
 
         return models.RefreshTokenResult.from_dict(response)
 
-    async def _handle_torrent_file_async(self, torrent_file: str) -> Dict[str, Any]:
+    async def _read_torrent_file_async(self, torrent_file: str) -> Dict[str, Any]:
+        """Asynchronously reads a torrent file from a local path or a remote URL into memory."""
         if torrent_file.startswith(("http://", "https://")):
             async with httpx.AsyncClient() as client:
                 response = await client.get(torrent_file)
@@ -679,13 +689,14 @@ class AsyncSeedr(BaseClient):
             content = await path.read_bytes()
             return {"torrent_file": content}
 
-    async def _delete_item(self, item_type: str, item_id: str) -> models.APIResult:
+    async def _delete_api_item(self, item_type: str, item_id: str) -> models.APIResult:
+        """Constructs and sends a request to delete a specific item (file, folder, etc.)."""
         data = _utils.prepare_delete_item_payload(item_type, item_id)
-        response_data = await self._request("post", "delete", data=data)
+        response_data = await self._api_request("post", "delete", data=data)
         return models.APIResult.from_dict(response_data)
 
     @classmethod
-    async def _create_client_from_auth(
+    async def _initialize_client(
         cls: Type["AsyncSeedr"],
         auth_callable: Callable[[httpx.AsyncClient], Coroutine[Any, Any, Dict[str, Any]]],
         token_callable: Callable[[Dict[str, Any]], Dict[str, Any]],
@@ -693,6 +704,7 @@ class AsyncSeedr(BaseClient):
         httpx_client: Optional[httpx.AsyncClient],
         **httpx_kwargs: Any,
     ) -> "AsyncSeedr":
+        """A factory helper that orchestrates the authentication process and constructs the client."""
         client = httpx_client or httpx.AsyncClient(**httpx_kwargs)
         success = False
         try:
@@ -710,14 +722,14 @@ class AsyncSeedr(BaseClient):
             if httpx_client is None and not success:
                 await client.aclose()
 
-    @classmethod
-    async def _execute_request(
-        cls: Type["AsyncSeedr"],
+    @staticmethod
+    async def _make_http_request(
         client: httpx.AsyncClient,
         method: str,
         url: str,
         **kwargs: Any,
     ) -> Dict[str, Any]:
+        """Performs the raw HTTP request and handles low-level network or HTTP status errors."""
         try:
             response = await client.request(method, url, **kwargs)
             response.raise_for_status()
@@ -730,21 +742,8 @@ class AsyncSeedr(BaseClient):
         except httpx.RequestError as e:
             raise NetworkError(str(e)) from e
 
-    @classmethod
-    async def _perform_auth_request(
-        cls: Type["AsyncSeedr"],
-        client: httpx.AsyncClient,
-        method: str,
-        url: str,
-        error_message: str,
-        **kwargs: Any,
-    ) -> Dict[str, Any]:
-        try:
-            return await cls._execute_request(client, method, url, **kwargs)
-        except APIError as e:
-            raise AuthenticationError(error_message, response=e.response) from e
-
     async def close(self) -> None:
+        """Closes the underlying httpx client if it was created by this instance."""
         if self._manages_client_lifecycle:
             await self._client.aclose()
 
