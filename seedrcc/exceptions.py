@@ -48,8 +48,6 @@ class AuthenticationError(SeedrError):
     """
     Raised when authentication or re-authentication fails.
 
-    This error is specialized to handle OAuth2-style error responses from the token endpoint.
-
     Attributes:
         response (Optional[httpx.Response]): The full HTTP response object from the failed auth attempt.
         error_type (Optional[str]): The error type from the API response body (e.g., 'invalid_grant').
@@ -77,4 +75,5 @@ class AuthenticationError(SeedrError):
 
 class NetworkError(SeedrError):
     """Raised for network-level errors, such as timeouts or connection problems."""
+
     pass
