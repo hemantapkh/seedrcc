@@ -27,13 +27,14 @@ plugins:
           options:
             show_root_heading: true
             show_source: true
+            members_order: source
 nav:
   - "Home": "index.md"
   - "API Reference":
-    - "Synchronous Client": "sync_client.md"
-    - "Asynchronous Client": "async_client.md"
-    - "Data Models": "models.md"
-    - "Exceptions": "exceptions.md"
+      - "Synchronous Client": "sync_client.md"
+      - "Asynchronous Client": "async_client.md"
+      - "Data Models": "models.md"
+      - "Exceptions": "exceptions.md"
 
 markdown_extensions:
   - pymdownx.highlight
