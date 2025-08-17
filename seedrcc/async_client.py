@@ -668,7 +668,11 @@ class AsyncSeedr(BaseClient):
         if "access_token" not in response:
             raise AuthenticationError("Token refresh failed. The response did not contain a new access token.")
 
-        self._token.access_token = response["access_token"]
+        self._token = Token(
+            access_token=response["access_token"],
+            refresh_token=self._token.refresh_token,
+            device_code=self._token.device_code,
+        )
         if self._on_token_refresh:
             if inspect.iscoroutinefunction(self._on_token_refresh):
                 await self._on_token_refresh(self._token)
