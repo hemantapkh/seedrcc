@@ -5,6 +5,7 @@ theme:
   favicon: images/seedrpy.png
   features:
     - content.code.copy
+    - navigation.footer
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
