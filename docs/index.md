@@ -35,9 +35,7 @@
 - **Modern and Typed:** Built with modern Python features and fully type-hinted for a better developer experience.
 - **Clean Object Models:** API responses are parsed into clean, easy-to-use dataclasses.
 
-## Getting Started
-
-### Installation
+## Installation
 
 Install the library from PyPI using `pip` or your favorite package manager.
 
@@ -45,15 +43,9 @@ Install the library from PyPI using `pip` or your favorite package manager.
 pip install seedrcc
 ```
 
-Or, install the latest version directly from GitHub:
+## Basic Usage
 
-```bash
-pip install git+https://github.com/hemantapkh/seedrcc.git
-```
-
-### Synchronous Usage
-
-Here's a quick example of how to get started with the synchronous client.
+### Synchronous
 
 ```python
 from seedrcc import Seedr
@@ -69,9 +61,7 @@ with Seedr.from_password("your_email@example.com", "your_password") as client:
     print(f"Added torrent: {torrent.title}")
 ```
 
-### Asynchronous Usage
-
-The library also provides a fully asynchronous client.
+### Asynchronous
 
 ```python
 import asyncio
@@ -92,7 +82,42 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### Handling Token Refreshes
+## Saving and Reusing a Token
+
+To avoid logging in every time, you can save the `Token` object after your first login and reuse it in the future.
+
+The `Token` object has several methods to convert it for storage or use:
+
+- [`token.to_json()`][seedrcc.token.Token.to_json]: Converts the token to a JSON string, perfect for saving in text files.
+- [`token.to_base64()`][seedrcc.token.Token.to_base64]: Converts the token to a simple Base64 string, great for databases or environment variables.
+- [`token.to_dict()`][seedrcc.token.Token.to_dict]: Converts the token to a Python dictionary for in-memory use.
+
+You can then use the corresponding `Token.from_...()` method to load it back.
+
+```python
+from seedrcc import Seedr, Token
+
+# Assume 'client' is an authenticated client from a previous session
+# client = Seedr.from_password("your_email@example.com", "your_password")
+
+# 1. Get the token and convert it to a JSON string
+token = client.token
+json_string = token.to_json()
+
+# You would typically save this string to a file or database.
+print(f"Saved token: {json_string}")
+
+
+# 2. In a new session, load the token from the saved string
+reloaded_token = Token.from_json(json_string)
+
+# 3. Initialize the client directly with the reloaded token
+with Seedr(token=reloaded_token) as new_client:
+    settings = new_client.get_settings()
+    print(f"Successfully re-authenticated as {settings.account.username}")
+```
+
+## Handling Token Refreshes
 
 The client will automatically refresh expired access tokens. If you are storing the token to reuse it later, you should provide a callback function to be notified of the new token.
 
