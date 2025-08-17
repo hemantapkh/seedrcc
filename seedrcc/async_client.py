@@ -42,7 +42,7 @@ class AsyncSeedr(BaseClient):
         import httpx
 
         my_httpx_client = httpx.AsyncClient(timeout=30.0)
-        # client = await AsyncSeedr.from_password("user", "pass", httpx_client=my_httpx_client)
+        client = await AsyncSeedr.from_password("user", "pass", httpx_client=my_httpx_client)
         ```
 
     Using `httpx` keyword arguments:
@@ -50,7 +50,7 @@ class AsyncSeedr(BaseClient):
         to the factory methods.
 
         ```python
-        # client = await AsyncSeedr.from_password("user", "pass", timeout=30.0)
+        client = await AsyncSeedr.from_password("user", "pass", timeout=30.0)
         ```
     """
 
@@ -72,12 +72,10 @@ class AsyncSeedr(BaseClient):
             self._client = httpx.AsyncClient(**httpx_kwargs)
             self._manages_client_lifecycle = True
 
-    # Public Properties
     @property
     def token(self) -> Token:
         return super().token
 
-    # Public Class Methods (Factories)
     @staticmethod
     async def get_device_code() -> models.DeviceCode:
         """
@@ -91,9 +89,9 @@ class AsyncSeedr(BaseClient):
         Example:
             ```python
             from seedrcc import AsyncSeedr
-            
-            # codes = await AsyncSeedr.get_device_code()
-            # print(f"Go to {codes.verification_url} and enter {codes.user_code}")
+
+            codes = await AsyncSeedr.get_device_code()
+            print(f"Go to {codes.verification_url} and enter {codes.user_code}")
             ```
         """
         params = {"client_id": _constants.DEVICE_CLIENT_ID}
@@ -129,7 +127,7 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # client = await AsyncSeedr.from_password("your_email@example.com", "your_password")
+            client = await AsyncSeedr.from_password("your_email@example.com", "your_password")
             ```
         """
 
@@ -167,10 +165,10 @@ class AsyncSeedr(BaseClient):
 
         Returns:
             An initialized `AsyncSeedr` client instance.
-        
+
         Example:
             ```python
-            # client = await AsyncSeedr.from_device_code("your_device_code")
+            client = await AsyncSeedr.from_device_code("your_device_code")
             ```
         """
 
@@ -212,7 +210,7 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # client = await AsyncSeedr.from_refresh_token("your_refresh_token")
+            client = await AsyncSeedr.from_refresh_token("your_refresh_token")
             ```
         """
 
@@ -230,7 +228,6 @@ class AsyncSeedr(BaseClient):
             **httpx_kwargs,
         )
 
-    # Public Instance Methods (Core API Logic)
     async def refresh_token(self) -> models.RefreshTokenResult:
         """
         Manually refreshes the access token.
@@ -240,14 +237,14 @@ class AsyncSeedr(BaseClient):
 
         Returns:
             The result of the token refresh operation.
-        
+
         Example:
             ```python
-            # try:
-            #     result = await client.refresh_token()
-            #     print(f"Token successfully refreshed. New token expires in {result.expires_in} seconds.")
-            # except AuthenticationError as e:
-            #     print(f"Failed to refresh token: {e}")
+            try:
+                result = await client.refresh_token()
+                print(f"Token successfully refreshed. New token expires in {result.expires_in} seconds.")
+            except AuthenticationError as e:
+                print(f"Failed to refresh token: {e}")
             ```
         """
         return await self._perform_token_refresh()
@@ -261,8 +258,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # settings = await client.get_settings()
-            # print(settings.account.username)
+            settings = await client.get_settings()
+            print(settings.account.username)
             ```
         """
         response_data = await self._request("get", "get_settings")
@@ -277,8 +274,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # usage = await client.get_memory_bandwidth()
-            # print(f"Space used: {usage.space_used}/{usage.space_max}")
+            usage = await client.get_memory_bandwidth()
+            print(f"Space used: {usage.space_used}/{usage.space_max}")
             ```
         """
         response_data = await self._request("get", "get_memory_bandwidth")
@@ -296,8 +293,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # response = await client.list_contents()
-            # print(response)
+            response = await client.list_contents()
+            print(response)
             ```
         """
         data = _utils.prepare_list_contents_payload(folder_id)
@@ -326,12 +323,12 @@ class AsyncSeedr(BaseClient):
         Example:
             ```python
             # Add by magnet link
-            # result = await client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
-            # print(result.title)
-            
+            result = await client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
+            print(result.title)
+
             # Add from a local .torrent file
-            # result = await client.add_torrent(torrent_file="/path/to/your/file.torrent")
-            # print(result.title)
+            result = await client.add_torrent(torrent_file="/path/to/your/file.torrent")
+            print(result.title)
             ```
         """
         data = _utils.prepare_add_torrent_payload(magnet_link, wishlist_id, folder_id)
@@ -354,9 +351,9 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # torrents = await client.scan_page(url='some_torrent_page_url')
-            # for torrent in torrents:
-            #     print(torrent.name)
+            torrents = await client.scan_page(url='some_torrent_page_url')
+            for torrent in torrents:
+                print(torrent.name)
             ```
         """
         data = _utils.prepare_scan_page_payload(url)
@@ -376,8 +373,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.fetch_file(file_id='12345')
-            # print(f"Download URL: {result.url}")
+            result = await client.fetch_file(file_id='12345')
+            print(f"Download URL: {result.url}")
             ```
         """
         data = _utils.prepare_fetch_file_payload(file_id)
@@ -396,8 +393,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.create_archive(folder_id='12345')
-            # print(f"Archive URL: {result.archive_url}")
+            result = await client.create_archive(folder_id='12345')
+            print(f"Archive URL: {result.archive_url}")
             ```
         """
         data = _utils.prepare_create_archive_payload(folder_id)
@@ -416,9 +413,9 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # results = await client.search_files(query='harry potter')
-            # for f in results.folders:
-            #     print(f"Found folder: {f.name}")
+            results = await client.search_files(query='harry potter')
+            for f in results.folders:
+                print(f"Found folder: {f.name}")
             ```
         """
         data = _utils.prepare_search_files_payload(query)
@@ -437,9 +434,9 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.add_folder(name='New Folder')
-            # if result.result:
-            #     print("Folder created successfully.")
+            result = await client.add_folder(name='New Folder')
+            if result.result:
+                print("Folder created successfully.")
             ```
         """
         data = _utils.prepare_add_folder_payload(name)
@@ -459,9 +456,9 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.rename_file(file_id='12345', rename_to='newName')
-            # if result.result:
-            #     print("File renamed successfully.")
+            result = await client.rename_file(file_id='12345', rename_to='newName')
+            if result.result:
+                print("File renamed successfully.")
             ```
         """
         data = _utils.prepare_rename_payload(rename_to, file_id=file_id)
@@ -481,9 +478,9 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.rename_folder(folder_id='12345', rename_to='newName')
-            # if result.result:
-            #     print("Folder renamed successfully.")
+            result = await client.rename_folder(folder_id='12345', rename_to='newName')
+            if result.result:
+                print("Folder renamed successfully.")
             ```
         """
         data = _utils.prepare_rename_payload(rename_to, folder_id=folder_id)
@@ -502,8 +499,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # response = await client.delete_file(file_id='12345')
-            # print(response)
+            response = await client.delete_file(file_id='12345')
+            print(response)
             ```
         """
         return await self._delete_item("file", file_id)
@@ -520,8 +517,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # response = await client.delete_folder(folder_id='12345')
-            # print(response)
+            response = await client.delete_folder(folder_id='12345')
+            print(response)
             ```
         """
         return await self._delete_item("folder", folder_id)
@@ -538,8 +535,8 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # response = await client.delete_torrent(torrent_id='12345')
-            # print(response)
+            response = await client.delete_torrent(torrent_id='12345')
+            print(response)
             ```
         """
         return await self._delete_item("torrent", torrent_id)
@@ -556,7 +553,7 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.delete_wishlist(wishlist_id='12345')
+            result = await client.delete_wishlist(wishlist_id='12345')
             ```
         """
         data = _utils.prepare_remove_wishlist_payload(wishlist_id)
@@ -572,9 +569,9 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # devices = await client.get_devices()
-            # for device in devices:
-            #     print(device.client_name)
+            devices = await client.get_devices()
+            for device in devices:
+                print(device.client_name)
             ```
         """
         response_data = await self._request("get", "get_devices")
@@ -594,7 +591,7 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.change_name(name='New Name', password='password')
+            result = await client.change_name(name='New Name', password='password')
             ```
         """
         data = _utils.prepare_change_name_payload(name, password)
@@ -614,14 +611,13 @@ class AsyncSeedr(BaseClient):
 
         Example:
             ```python
-            # result = await client.change_password(old_password='old', new_password='new')
+            result = await client.change_password(old_password='old', new_password='new')
             ```
         """
         data = _utils.prepare_change_password_payload(old_password, new_password)
         response_data = await self._request("post", "user_account_modify", data=data)
         return models.APIResult.from_dict(response_data)
 
-    # Private Helper Methods
     async def _request(
         self, http_method: str, func: str, files: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> Dict[str, Any]:
@@ -640,7 +636,7 @@ class AsyncSeedr(BaseClient):
                 params["access_token"] = self._token.access_token
                 data = await self._execute_request(self._client, http_method, url, params=params, files=files, **kwargs)
 
-            if isinstance(data, dict) and data.get("result") is not True and "access_token" not in data:
+            if isinstance(data, dict) and data.get("result", True) is not True:
                 raise APIError(data.get("error", "Unknown API error"))
 
             return data
@@ -703,9 +699,7 @@ class AsyncSeedr(BaseClient):
                 refresh_token=response_data.get("refresh_token"),
                 **token_extras,
             )
-            instance = cls(
-                token, on_token_refresh=on_token_refresh, httpx_client=client, **httpx_kwargs
-            )
+            instance = cls(token, on_token_refresh=on_token_refresh, httpx_client=client, **httpx_kwargs)
             success = True
             return instance
         finally:
@@ -746,7 +740,6 @@ class AsyncSeedr(BaseClient):
         except APIError as e:
             raise AuthenticationError(error_message, response=e.response) from e
 
-    # Dunder Methods (Context Management)
     async def close(self) -> None:
         if self._manages_client_lifecycle:
             await self._client.aclose()
@@ -755,4 +748,6 @@ class AsyncSeedr(BaseClient):
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        await self.close()
+
         await self.close()
