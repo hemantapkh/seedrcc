@@ -109,6 +109,8 @@ class AsyncSeedr(BaseClient):
         password: str,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.AsyncClient] = None,
+        timeout: float = 30.0,
+        proxies: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "AsyncSeedr":
         """
@@ -120,6 +122,8 @@ class AsyncSeedr(BaseClient):
             on_token_refresh: A callback function that is called with the new
                 Token object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.AsyncClient` instance.
+            timeout: The timeout for network requests in seconds.
+            proxies: A dictionary of proxies to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.AsyncClient` constructor.
                 These are ignored if `httpx_client` is provided.
 
@@ -148,6 +152,8 @@ class AsyncSeedr(BaseClient):
         device_code: str,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.AsyncClient] = None,
+        timeout: float = 30.0,
+        proxies: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "AsyncSeedr":
         """
@@ -161,6 +167,8 @@ class AsyncSeedr(BaseClient):
             on_token_refresh: A callback function that is called with the new
                 Token object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.AsyncClient` instance.
+            timeout: The timeout for network requests in seconds.
+            proxies: A dictionary of proxies to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.AsyncClient` constructor.
                 These are ignored if `httpx_client` is provided.
 
@@ -195,6 +203,8 @@ class AsyncSeedr(BaseClient):
         refresh_token: str,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.AsyncClient] = None,
+        timeout: float = 30.0,
+        proxies: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "AsyncSeedr":
         """
@@ -205,6 +215,8 @@ class AsyncSeedr(BaseClient):
             on_token_refresh: A callback function that is called with the new
                 Token object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.AsyncClient` instance.
+            timeout: The timeout for network requests in seconds.
+            proxies: A dictionary of proxies to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.AsyncClient` constructor.
                 These are ignored if `httpx_client` is provided.
 
@@ -705,9 +717,13 @@ class AsyncSeedr(BaseClient):
         token_callable: Callable[[Dict[str, Any]], Dict[str, Any]],
         on_token_refresh: Optional[Callable[[Token], None]],
         httpx_client: Optional[httpx.AsyncClient],
+        timeout: float = 30.0,
+        proxies: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "AsyncSeedr":
         """A factory helper that orchestrates the authentication process and constructs the client."""
+        httpx_kwargs.setdefault("timeout", timeout)
+        httpx_kwargs.setdefault("proxies", proxies)
         client = httpx_client or httpx.AsyncClient(**httpx_kwargs)
         success = False
         try:
