@@ -5,7 +5,7 @@
 <h1 align="center">seedrcc</h1>
 
 <p align="center">
-  <strong>A complete, modern, and fully-featured Python API wrapper for seedr.cc.</strong>
+  <strong>A complete and fully-featured Python API wrapper for seedr.cc.</strong>
 </p>
 
 <p align="center">
@@ -25,17 +25,18 @@
 
 ---
 
-**seedrcc** provides a clean, robust, and fully-featured interface for interacting with the Seedr API, with first-class support for both synchronous and asynchronous operations.
+**seedrcc** provides a clean, complete, and fully-featured Python interface for interacting with the Seedr API, with support for both synchronous and asynchronous operations.
 
-## Features
+## ✨ Features
 
 - **Complete API Coverage:** All major Seedr API endpoints are supported.
-- **Sync & Async:** Use `seedrcc.Seedr` for a synchronous client or `seedrcc.AsyncSeedr` for an asynchronous one.
+- **Sync & Async:** Includes `seedrcc.Seedr` for synchronous operations and `seedrcc.AsyncSeedr` for asynchronous ones.
 - **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
-- **Modern & Typed:** Built with modern Python features and fully type-hinted for a superior developer experience.
-- **Pydantic Models:** API responses are parsed into clean, easy-to-use Pydantic models.
+- **Fully Typed:** Provides type hints for all methods and models to improve code quality and clarity.
+- **Custom Exceptions:** Provides specific exceptions for API, network, and authentication errors.
+- **Dataclass Models:** API responses are parsed into clean, easy-to-use dataclasses.
 
-## Installation
+## 📦 Installation
 
 Install from PyPI:
 
@@ -49,7 +50,7 @@ Or, install the latest version directly from GitHub:
 pip install git+https://github.com/hemantapkh/seedrcc.git
 ```
 
-## Usage
+## 🚀 Usage
 
 ### Synchronous Example (with Device Authentication)
 
@@ -86,21 +87,21 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## How I Found the Endpoints
+## 🗺️ How I Found the Endpoints
 
 While Seedr.cc offers a premium [API](https://www.seedr.cc/docs/api/rest/v1/), it is not available to free users. This library was built by studying the network requests from the official **[Kodi](https://github.com/DannyZB/seedr_kodi)** and **[Chrome](https://github.com/DannyZB/seedr_chrome)** extensions.
 
 Further analysis of the main Seedr website's network traffic revealed a very similar API pattern, which made it possible to implement the full feature set. Because the library uses the same API as the official tools, it works reliably for all users.
 
-## Documentation
+## 📚 Documentation
 
 For a complete guide to every available method, data model, and advanced features like saving sessions, please see the **[Full Documentation](https://seedrcc.readthedocs.io/)**.
 
-## Contributing
+## 🙌 Contributing
 
 Contributions are welcome! If you'd like to help, please feel free to fork the repository, create a feature branch, and open a pull request.
 
-## License
+## 📄 License
 
 This project is distributed under the MIT License. See `LICENSE` for more information.
 
