@@ -14,46 +14,62 @@ class AsyncSeedr(BaseClient):
     """Asynchronous client for interacting with the Seedr API.
 
     This client provides access to all the API endpoints and handles authentication.
-    You can use one of the factory class methods to create an instance:
-    - `AsyncSeedr.from_password()`
-    - `AsyncSeedr.from_device_code()`
-    - `AsyncSeedr.from_refresh_token()`
+
+    **Creating a Client:**
+
+    There are two ways to initialize the client:
+
+    1.  **If you have a previously saved token**, you can instantiate the client directly.
+        This is the recommended approach for existing sessions.
+    2.  **If you need to authenticate for a new session**, use one of the factory
+        class methods below.
 
     **Initializing with an existing token:**
 
-    If you have a previously saved token, you can initialize the client directly.
+    The `Token` object can be created from a dictionary, a JSON string, or a Base64 string.
 
     ```python
     from seedrcc import AsyncSeedr, Token
 
-    # Load your token data (e.g., from a file or database)
-    token_data = {"access_token": "...", "refresh_token": "..."}
-    token = Token.from_dict(token_data)
+    # Example: From a JSON string (e.g., loaded from a file or database)
+    json_string = '{"access_token": "...", "refresh_token": "..."}'
+    token = Token.from_json(json_string)
+    # You can also use .from_dict() or .from_base64().
 
     client = AsyncSeedr(token=token)
     # You can now make authenticated requests
     settings = await client.get_settings()
     ```
 
-    **Using a custom `httpx.AsyncClient`:**
+    **Authenticating to get a new token:**
 
-    For advanced configuration (e.g., custom timeouts, proxies, headers),
-    you can pass your own `httpx.AsyncClient` instance.
+    Use one of the following factory methods:
+
+    - [`AsyncSeedr.from_password()`][seedrcc.async_client.AsyncSeedr.from_password]
+    - [`AsyncSeedr.from_device_code()`][seedrcc.async_client.AsyncSeedr.from_device_code]
+    - [`AsyncSeedr.from_refresh_token()`][seedrcc.async_client.AsyncSeedr.from_refresh_token]
+
+    **Customizing Network Requests:**
+
+    You can customize the underlying `httpx` client by passing arguments directly
+    to the factory methods, or by providing your own pre-configured client.
 
     ```python
     import httpx
 
-    my_httpx_client = httpx.AsyncClient(timeout=30.0)
+    # Example 1: Passing simple arguments like timeout and proxies
+    client = await AsyncSeedr.from_password(
+        "user", "pass",
+        timeout=10.0,
+        proxies={"https": "https://myproxy.com"}
+    )
+
+    # Example 2: For advanced configuration, pass a pre-configured client
+    my_httpx_client = httpx.AsyncClient(
+        timeout=30.0,
+        limits=httpx.Limits(max_connections=100)
+    )
     client = await AsyncSeedr.from_password("user", "pass", httpx_client=my_httpx_client)
-    ```
-
-    **Using `httpx` keyword arguments:**
-
-    For simpler customizations, you can pass `httpx.AsyncClient` arguments directly
-    to the factory methods.
-
-    ```python
-    client = await AsyncSeedr.from_password("user", "pass", timeout=30.0)
     ```
     """
 
@@ -146,7 +162,15 @@ class AsyncSeedr(BaseClient):
             except APIError as e:
                 raise AuthenticationError("Authentication failed", response=e.response) from e
 
-        return await cls._initialize_client(auth_callable, lambda r: {}, on_token_refresh, httpx_client, **httpx_kwargs)
+        return await cls._initialize_client(
+            auth_callable,
+            lambda r: {},
+            on_token_refresh,
+            httpx_client,
+            timeout=timeout,
+            proxies=proxies,
+            **httpx_kwargs,
+        )
 
     @classmethod
     async def from_device_code(
@@ -196,6 +220,8 @@ class AsyncSeedr(BaseClient):
             lambda r: {"device_code": device_code},
             on_token_refresh,
             httpx_client,
+            timeout=timeout,
+            proxies=proxies,
             **httpx_kwargs,
         )
 
@@ -244,6 +270,8 @@ class AsyncSeedr(BaseClient):
             lambda r: {"refresh_token": refresh_token},
             on_token_refresh,
             httpx_client,
+            timeout=timeout,
+            proxies=proxies,
             **httpx_kwargs,
         )
 
