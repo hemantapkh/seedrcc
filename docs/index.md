@@ -29,11 +29,11 @@
 
 ## Features
 
--   **Full API Coverage:** All major Seedr API endpoints are supported.
--   **Both Sync and Async:** Use `seedrcc.Seedr` for a synchronous client or `seedrcc.AsyncSeedr` for an asynchronous one.
--   **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
--   **Modern and Typed:** Built with modern Python features and fully type-hinted for a better developer experience.
--   **Clean Object Models:** API responses are parsed into clean, easy-to-use dataclasses.
+- **Full API Coverage:** All major Seedr API endpoints are supported.
+- **Both Sync and Async:** Use `seedrcc.Seedr` for a synchronous client or `seedrcc.AsyncSeedr` for an asynchronous one.
+- **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
+- **Modern and Typed:** Built with modern Python features and fully type-hinted for a better developer experience.
+- **Clean Object Models:** API responses are parsed into clean, easy-to-use dataclasses.
 
 ## Getting Started
 
@@ -98,6 +98,8 @@ The client will automatically refresh expired access tokens. If you are storing 
 
 The `on_token_refresh` argument can be passed to any factory method (`from_password`, etc.) or to the client constructor.
 
+When using the `AsyncSeedr` client, you can provide an `async` function for the callback. If a regular synchronous function is provided instead, it will be safely executed in a separate thread to prevent blocking the asynchronous event loop.
+
 **Callback with a single argument:**
 
 ```python
@@ -116,9 +118,12 @@ client = Seedr.from_password("user", "pass", on_token_refresh=save_token)
 
 **Callback with multiple arguments:**
 
-If you need to pass additional arguments to your callback (like a user ID), you can use a `lambda`.
+If you need to pass additional arguments to your callback (like a user ID), you can use a `lambda` for a synchronous callback. For an `async` callback, the recommended approach is to use `functools.partial`.
 
 ```python
+import functools
+
+# Synchronous example with lambda
 def save_token_for_user(token: Token, user_id: int):
     print(f"Saving new token for user {user_id}")
     # ... save to database ...
@@ -128,10 +133,21 @@ client = Seedr.from_password(
     "user", "pass",
     on_token_refresh=lambda token: save_token_for_user(token, user_id)
 )
+
+# Asynchronous example with functools.partial
+async def save_token_for_user_async(token: Token, user_id: int):
+    print(f"Saving new token for user {user_id}")
+    # ... save to database ...
+
+user_id = 456
+async_callback = functools.partial(save_token_for_user_async, user_id=user_id)
+async_client = await AsyncSeedr.from_password(
+    "user", "pass", on_token_refresh=async_callback
+)
 ```
 
 ## Next Steps
 
--   **API Reference:** Dive into the [Synchronous Client](sync_client.md) or the [Asynchronous Client](async_client.md) reference for detailed information on all available methods.
--   **License:** This project is licensed under the MIT License. See the `LICENSE` file for details.
--   **Contributing:** Contributions are welcome! Please see the project on [GitHub](https://github.com/hemantapkh/seedrcc).
+- **API Reference:** Dive into the [Synchronous Client](sync_client.md) or the [Asynchronous Client](async_client.md) reference for detailed information on all available methods.
+- **License:** This project is licensed under the MIT License. See the `LICENSE` file for details.
+- **Contributing:** Contributions are welcome! Please see the project on [GitHub](https://github.com/hemantapkh/seedrcc).

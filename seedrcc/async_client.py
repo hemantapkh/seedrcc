@@ -1,3 +1,4 @@
+import inspect
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
 
 import anyio
@@ -660,7 +661,10 @@ class AsyncSeedr(BaseClient):
 
         self._token.access_token = response["access_token"]
         if self._on_token_refresh:
-            self._on_token_refresh(self._token)
+            if inspect.iscoroutinefunction(self._on_token_refresh):
+                await self._on_token_refresh(self._token)
+            else:
+                await anyio.to_thread.run_sync(self._on_token_refresh, self._token)
 
         return models.RefreshTokenResult.from_dict(response)
 
