@@ -44,43 +44,6 @@ class _BaseModel:
 
 
 @dataclass
-class File(_BaseModel):
-    """Represents a file within Seedr."""
-
-    file_id: int
-    name: str
-    size: int
-    folder_id: int
-    folder_file_id: int
-    hash: str
-    last_update: Optional[datetime] = None
-    play_audio: bool = False
-    play_video: bool = False
-    video_progress: Optional[str] = None
-    is_lost: int = 0
-    thumb: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "File":
-        instance = cls(
-            file_id=data.get("file_id", 0),
-            name=data.get("name", ""),
-            size=data.get("size", 0),
-            folder_id=data.get("folder_id", 0),
-            folder_file_id=data.get("folder_file_id", 0),
-            hash=data.get("hash", ""),
-            last_update=parse_datetime(data.get("last_update")),
-            play_audio=data.get("play_audio", False),
-            play_video=data.get("play_video", False),
-            video_progress=data.get("video_progress"),
-            is_lost=data.get("is_lost", 0),
-            thumb=data.get("thumb"),
-        )
-        instance._raw = data
-        return instance
-
-
-@dataclass
 class Torrent(_BaseModel):
     """Represents a torrent in the user's account."""
 
@@ -130,6 +93,43 @@ class Torrent(_BaseModel):
 
 
 @dataclass
+class File(_BaseModel):
+    """Represents a file within Seedr."""
+
+    file_id: int
+    name: str
+    size: int
+    folder_id: int
+    folder_file_id: int
+    hash: str
+    last_update: Optional[datetime] = None
+    play_audio: bool = False
+    play_video: bool = False
+    video_progress: Optional[str] = None
+    is_lost: int = 0
+    thumb: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "File":
+        instance = cls(
+            file_id=data.get("file_id", 0),
+            name=data.get("name", ""),
+            size=data.get("size", 0),
+            folder_id=data.get("folder_id", 0),
+            folder_file_id=data.get("folder_file_id", 0),
+            hash=data.get("hash", ""),
+            last_update=parse_datetime(data.get("last_update")),
+            play_audio=data.get("play_audio", False),
+            play_video=data.get("play_video", False),
+            video_progress=data.get("video_progress"),
+            is_lost=data.get("is_lost", 0),
+            thumb=data.get("thumb"),
+        )
+        instance._raw = data
+        return instance
+
+
+@dataclass
 class Folder(_BaseModel):
     """Represents a folder, which can contain files, torrents, and other folders."""
 
@@ -165,44 +165,6 @@ class Folder(_BaseModel):
             parent=data.get("parent"),
             timestamp=parse_datetime(data.get("timestamp")),
             indexes=data.get("indexes", []),
-        )
-        instance._raw = data
-        return instance
-
-
-@dataclass
-class ListContentsResult(Folder):
-    """Represents the result of listing folder contents, including account metadata."""
-
-    space_used: int = 0
-    space_max: int = 0
-    saw_walkthrough: int = 0
-    type: str = ""
-    t: List[Optional[datetime]] = field(default_factory=list)
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "ListContentsResult":
-        folder = Folder.from_dict(data)
-        instance = cls(
-            id=folder.id,
-            name=folder.name,
-            fullname=folder.fullname,
-            size=folder.size,
-            last_update=folder.last_update,
-            is_shared=folder.is_shared,
-            play_audio=folder.play_audio,
-            play_video=folder.play_video,
-            folders=folder.folders,
-            files=folder.files,
-            torrents=folder.torrents,
-            parent=folder.parent,
-            timestamp=folder.timestamp,
-            indexes=folder.indexes,
-            space_used=data.get("space_used", 0),
-            space_max=data.get("space_max", 0),
-            saw_walkthrough=data.get("saw_walkthrough", 0),
-            type=data.get("type", ""),
-            t=[parse_datetime(ts) for ts in data.get("t", [])],
         )
         instance._raw = data
         return instance
@@ -262,24 +224,14 @@ class UserSettings(_BaseModel):
 
 
 @dataclass
-class AddTorrentResult(_BaseModel):
-    """Represents the result of adding a torrent."""
+class MemoryBandwidth(_BaseModel):
+    """Represents the user's memory and bandwidth usage details."""
 
-    result: bool
-    user_torrent_id: int
-    title: str
-    torrent_hash: str
-    code: Optional[int] = None
-
-
-@dataclass
-class CreateArchiveResult(_BaseModel):
-    """Represents the result of a request to create an archive."""
-
-    result: bool
-    archive_id: int
-    archive_url: str
-    code: Optional[int] = None
+    bandwidth_used: int
+    bandwidth_max: int
+    space_used: int
+    space_max: int
+    is_premium: int
 
 
 @dataclass
@@ -304,6 +256,65 @@ class DeviceCode(_BaseModel):
 
 
 @dataclass
+class ListContentsResult(Folder):
+    """Represents the result of listing folder contents, including account metadata."""
+
+    space_used: int = 0
+    space_max: int = 0
+    saw_walkthrough: int = 0
+    type: str = ""
+    t: List[Optional[datetime]] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ListContentsResult":
+        folder = Folder.from_dict(data)
+        instance = cls(
+            id=folder.id,
+            name=folder.name,
+            fullname=folder.fullname,
+            size=folder.size,
+            last_update=folder.last_update,
+            is_shared=folder.is_shared,
+            play_audio=folder.play_audio,
+            play_video=folder.play_video,
+            folders=folder.folders,
+            files=folder.files,
+            torrents=folder.torrents,
+            parent=folder.parent,
+            timestamp=folder.timestamp,
+            indexes=folder.indexes,
+            space_used=data.get("space_used", 0),
+            space_max=data.get("space_max", 0),
+            saw_walkthrough=data.get("saw_walkthrough", 0),
+            type=data.get("type", ""),
+            t=[parse_datetime(ts) for ts in data.get("t", [])],
+        )
+        instance._raw = data
+        return instance
+
+
+@dataclass
+class AddTorrentResult(_BaseModel):
+    """Represents the result of adding a torrent."""
+
+    result: bool
+    user_torrent_id: int
+    title: str
+    torrent_hash: str
+    code: Optional[int] = None
+
+
+@dataclass
+class CreateArchiveResult(_BaseModel):
+    """Represents the result of a request to create an archive."""
+
+    result: bool
+    archive_id: int
+    archive_url: str
+    code: Optional[int] = None
+
+
+@dataclass
 class FetchFileResult(_BaseModel):
     """Represents the result of a request to fetch a file, including the download URL."""
 
@@ -315,14 +326,13 @@ class FetchFileResult(_BaseModel):
 
 
 @dataclass
-class MemoryBandwidth(_BaseModel):
-    """Represents the user's memory and bandwidth usage details."""
+class RefreshTokenResult(_BaseModel):
+    """Represents the response from a token refresh."""
 
-    bandwidth_used: int
-    bandwidth_max: int
-    space_used: int
-    space_max: int
-    is_premium: int
+    access_token: str
+    expires_in: int
+    token_type: str
+    scope: Optional[str] = None
 
 
 @dataclass
@@ -331,13 +341,3 @@ class APIResult(_BaseModel):
 
     result: bool
     code: Optional[int] = None
-
-
-@dataclass
-class RefreshTokenResult(_BaseModel):
-    """Represents the response from a token refresh."""
-
-    access_token: str
-    expires_in: int
-    token_type: str
-    scope: Optional[str] = None

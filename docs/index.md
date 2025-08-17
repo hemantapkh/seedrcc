@@ -124,22 +124,6 @@ client = Seedr.from_password(
 )
 ```
 
-### Accessing Raw Data
-
-All data models provide a `.raw()` method to access the original, unmodified dictionary from the API. This is useful if you need to access a field that is not explicitly defined in the model.
-
-```python
-# This example assumes you have a 'client' instance from a previous example
-settings = client.get_settings()
-
-# Access a typed attribute
-print(settings.account.username)
-
-# Access the raw, underlying dictionary
-raw_data = settings.raw()
-print(raw_data["account"]["username"]) 
-```
-
 ## Next Steps
 
 -   **API Reference:** Dive into the [Synchronous Client](sync_client.md) or the [Asynchronous Client](async_client.md) reference for detailed information on all available methods.

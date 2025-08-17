@@ -28,6 +28,13 @@ plugins:
             show_root_heading: true
             show_source: true
             members_order: source
+            extensions:
+              - griffe_fieldz:
+                  include_inherited: false
+                  include_private: false
+                  add_fields_to: docstring-attributes
+                  remove_fields_from_members: false
+
 nav:
   - "Home": "index.md"
   - "API Reference":
