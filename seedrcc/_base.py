@@ -32,7 +32,6 @@ class BaseClient(ABC):
         """Get the device and user code required for authorization."""
         pass
 
-    # Public Instance Methods (Core API Logic)
     @abstractmethod
     def refresh_token(self) -> models.RefreshTokenResult:
         """Manually refresh the access token."""
@@ -133,16 +132,3 @@ class BaseClient(ABC):
     def change_password(self, old_password: str, new_password: str) -> models.APIResult:
         """Change the password of the account."""
         pass
-
-    @abstractmethod
-    def _request(
-        self, http_method: str, func: str, files: Optional[Dict[str, Any]] = None, **kwargs: Any
-    ) -> Dict[str, Any]:
-        """Helper to send requests."""
-        pass
-
-    @abstractmethod
-    def _perform_token_refresh(self) -> models.RefreshTokenResult:
-        """Refresh the access token."""
-        pass
-
