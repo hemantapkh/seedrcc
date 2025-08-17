@@ -23,13 +23,13 @@ __all__ = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class _BaseModel:
     """Base model with a raw data field. Internal use only."""
 
     _raw: Dict[str, Any] = field(repr=False, compare=False, init=False)
 
-    def raw(self) -> Dict[str, Any]:
+    def get_raw(self) -> Dict[str, Any]:
         """Returns the raw, unmodified dictionary from the API response."""
         return self._raw
 
@@ -39,11 +39,11 @@ class _BaseModel:
         model_fields = {f.name for f in fields(cls)}
         filtered_data = {k: v for k, v in data.items() if k in model_fields}
         instance = cls(**filtered_data)
-        instance._raw = data
+        object.__setattr__(instance, "_raw", data)
         return instance
 
 
-@dataclass
+@dataclass(frozen=True)
 class Torrent(_BaseModel):
     """Represents a torrent in the user's account."""
 
@@ -88,11 +88,11 @@ class Torrent(_BaseModel):
             stopped=data.get("stopped", 0),
             progress_url=data.get("progress_url"),
         )
-        instance._raw = data
+        object.__setattr__(instance, "_raw", data)
         return instance
 
 
-@dataclass
+@dataclass(frozen=True)
 class File(_BaseModel):
     """Represents a file within Seedr."""
 
@@ -125,11 +125,11 @@ class File(_BaseModel):
             is_lost=data.get("is_lost", 0),
             thumb=data.get("thumb"),
         )
-        instance._raw = data
+        object.__setattr__(instance, "_raw", data)
         return instance
 
 
-@dataclass
+@dataclass(frozen=True)
 class Folder(_BaseModel):
     """Represents a folder, which can contain files, torrents, and other folders."""
 
@@ -166,11 +166,11 @@ class Folder(_BaseModel):
             timestamp=parse_datetime(data.get("timestamp")),
             indexes=data.get("indexes", []),
         )
-        instance._raw = data
+        object.__setattr__(instance, "_raw", data)
         return instance
 
 
-@dataclass
+@dataclass(frozen=True)
 class AccountSettings(_BaseModel):
     """Represents the nested 'settings' object in the user settings response."""
 
@@ -181,7 +181,7 @@ class AccountSettings(_BaseModel):
     email_newsletter: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class AccountInfo(_BaseModel):
     """Represents the nested 'account' object in the user settings response."""
 
@@ -200,7 +200,7 @@ class AccountInfo(_BaseModel):
     max_invites: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserSettings(_BaseModel):
     """Represents the complete response from the get_settings endpoint."""
 
@@ -219,11 +219,11 @@ class UserSettings(_BaseModel):
             account=AccountInfo.from_dict(data.get("account", {})),
             country=data.get("country", ""),
         )
-        instance._raw = data
+        object.__setattr__(instance, "_raw", data)
         return instance
 
 
-@dataclass
+@dataclass(frozen=True)
 class MemoryBandwidth(_BaseModel):
     """Represents the user's memory and bandwidth usage details."""
 
@@ -234,7 +234,7 @@ class MemoryBandwidth(_BaseModel):
     is_premium: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Device(_BaseModel):
     """Represents a device connected to the user's account."""
 
@@ -244,7 +244,7 @@ class Device(_BaseModel):
     tk: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class DeviceCode(_BaseModel):
     """Represents the codes used in the device authentication flow."""
 
@@ -255,7 +255,7 @@ class DeviceCode(_BaseModel):
     verification_url: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class ListContentsResult(Folder):
     """Represents the result of listing folder contents, including account metadata."""
 
@@ -263,6 +263,7 @@ class ListContentsResult(Folder):
     space_max: int = 0
     saw_walkthrough: int = 0
     type: str = ""
+    raw: str = "asd"
     t: List[Optional[datetime]] = field(default_factory=list)
 
     @classmethod
@@ -271,6 +272,7 @@ class ListContentsResult(Folder):
         instance = cls(
             id=folder.id,
             name=folder.name,
+            raw="asd",
             fullname=folder.fullname,
             size=folder.size,
             last_update=folder.last_update,
@@ -289,11 +291,11 @@ class ListContentsResult(Folder):
             type=data.get("type", ""),
             t=[parse_datetime(ts) for ts in data.get("t", [])],
         )
-        instance._raw = data
+        object.__setattr__(instance, "_raw", data)
         return instance
 
 
-@dataclass
+@dataclass(frozen=True)
 class AddTorrentResult(_BaseModel):
     """Represents the result of adding a torrent."""
 
@@ -304,7 +306,7 @@ class AddTorrentResult(_BaseModel):
     code: Optional[int] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class CreateArchiveResult(_BaseModel):
     """Represents the result of a request to create an archive."""
 
@@ -314,7 +316,7 @@ class CreateArchiveResult(_BaseModel):
     code: Optional[int] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class FetchFileResult(_BaseModel):
     """Represents the result of a request to fetch a file, including the download URL."""
 
@@ -325,7 +327,7 @@ class FetchFileResult(_BaseModel):
     code: Optional[int] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class RefreshTokenResult(_BaseModel):
     """Represents the response from a token refresh."""
 
@@ -335,7 +337,7 @@ class RefreshTokenResult(_BaseModel):
     scope: Optional[str] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class APIResult(_BaseModel):
     """Represents a generic API result for operations that return a simple success/failure."""
 

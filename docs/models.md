@@ -4,7 +4,7 @@ All data returned from the Seedr API is parsed into clean, easy-to-use data mode
 
 ## Accessing Raw Data
 
-All data models provide a `.raw()` method to access the original, unmodified dictionary from the server.
+All data models provide a `.get_raw()` method to access the original, unmodified dictionary from the server.
 
 ```python
 # This example assumes you have a 'client' instance from a previous example
@@ -14,7 +14,7 @@ settings = client.get_settings()
 print(settings.account.username)
 
 # Access the raw, underlying dictionary
-raw_data = settings.raw()
+raw_data = settings.get_raw()
 print(raw_data["account"]["username"]) 
 ```
 
