@@ -5,7 +5,7 @@
 <h1 align="center">seedrcc</h1>
 
 <p align="center">
-  <strong>A complete, modern, and fully-featured Python API wrapper for seedr.cc.</strong>
+  <strong>A complete and fully-featured Python API wrapper for seedr.cc.</strong>
 </p>
 
 <p align="center">
@@ -25,15 +25,16 @@
 
 ---
 
-**seedrcc** provides a clean, modern, and fully-featured interface for interacting with the Seedr API, with support for both synchronous and asynchronous operations.
+**seedrcc** provides a clean, complete, and fully-featured Python interface for interacting with the Seedr API, with support for both synchronous and asynchronous operations.
 
 ## Features
 
-- **Full API Coverage:** All major Seedr API endpoints are supported.
-- **Both Sync and Async:** Use `seedrcc.Seedr` for a synchronous client or `seedrcc.AsyncSeedr` for an asynchronous one.
+- **Complete API Coverage:** All major Seedr API endpoints are supported.
+- **Sync & Async:** Includes `seedrcc.Seedr` for synchronous operations and `seedrcc.AsyncSeedr` for asynchronous ones.
 - **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
-- **Modern and Typed:** Built with modern Python features and fully type-hinted for a better developer experience.
-- **Clean Object Models:** API responses are parsed into clean, easy-to-use dataclasses.
+- **Fully Typed:** Provides type hints for all methods and models to improve code quality and clarity.
+- **Custom Exceptions:** Provides specific exceptions for API, network, and authentication errors.
+- **Dataclass Models:** API responses are parsed into clean, easy-to-use dataclasses.
 
 ## Installation
 
