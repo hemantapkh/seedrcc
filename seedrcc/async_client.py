@@ -778,4 +778,3 @@ class AsyncSeedr(BaseClient):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
-        await self.close()
