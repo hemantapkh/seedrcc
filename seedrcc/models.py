@@ -20,6 +20,8 @@ __all__ = [
     "AddTorrentResult",
     "APIResult",
     "RefreshTokenResult",
+    "ScannedTorrent",
+    "ScanPageResult",
 ]
 
 
@@ -256,6 +258,37 @@ class DeviceCode(_BaseModel):
 
 
 @dataclass(frozen=True)
+class ScannedTorrent(_BaseModel):
+    """Represents a torrent found by the scan_page method."""
+
+    id: int
+    hash: str
+    size: int
+    title: str
+    magnet: str
+    last_use: Optional[datetime]
+    pct: float
+    filenames: List[str] = field(default_factory=list)
+    filesizes: List[int] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ScannedTorrent":
+        instance = cls(
+            id=data.get("id", 0),
+            hash=data.get("hash", ""),
+            size=data.get("size", 0),
+            title=data.get("title", ""),
+            magnet=data.get("magnet", ""),
+            last_use=parse_datetime(data.get("last_use")),
+            pct=data.get("pct", 0.0),
+            filenames=data.get("filenames", []),
+            filesizes=data.get("filesizes", []),
+        )
+        object.__setattr__(instance, "_raw", data)
+        return instance
+
+
+@dataclass(frozen=True)
 class ListContentsResult(Folder):
     """Represents the result of listing folder contents, including account metadata."""
 
@@ -335,6 +368,22 @@ class RefreshTokenResult(_BaseModel):
     expires_in: int
     token_type: str
     scope: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ScanPageResult(_BaseModel):
+    """Represents the full result of a scan_page request."""
+
+    result: bool
+    torrents: List[ScannedTorrent]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ScanPageResult":
+        instance = cls(
+            result=data.get("result", False), torrents=[ScannedTorrent.from_dict(t) for t in data.get("torrents", [])]
+        )
+        object.__setattr__(instance, "_raw", data)
+        return instance
 
 
 @dataclass(frozen=True)

@@ -345,7 +345,7 @@ class AsyncSeedr(BaseClient):
         response_data = await self._api_request("post", "add_torrent", data=data, files=files)
         return models.AddTorrentResult.from_dict(response_data)
 
-    async def scan_page(self, url: str) -> List[models.Torrent]:
+    async def scan_page(self, url: str) -> models.ScanPageResult:
         """
         Scan a page for torrents and magnet links.
 
@@ -353,19 +353,18 @@ class AsyncSeedr(BaseClient):
             url (str): The URL of the page to scan.
 
         Returns:
-            A list of torrents found on the page.
+            An object containing the list of torrents found on the page.
 
         Example:
             ```python
-            torrents = await client.scan_page(url='some_torrent_page_url')
-            for torrent in torrents:
-                print(torrent.name)
+            result = await client.scan_page(url='some_torrent_page_url')
+            for torrent in result.torrents:
+                print(torrent.title)
             ```
         """
         data = _utils.prepare_scan_page_payload(url)
         response_data = await self._api_request("post", "scan_page", data=data)
-        torrents_data = response_data.get("torrents", [])
-        return [models.Torrent.from_dict(t) for t in torrents_data]
+        return models.ScanPageResult.from_dict(response_data)
 
     async def fetch_file(self, file_id: str) -> models.FetchFileResult:
         """
