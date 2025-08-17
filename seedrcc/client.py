@@ -71,12 +71,10 @@ class Seedr(BaseClient):
             self._client = httpx.Client(**httpx_kwargs)
             self._manages_client_lifecycle = True
 
-    # Public Properties
     @property
     def token(self) -> Token:
         return super().token
 
-    # Public Class Methods (Factories)
     @staticmethod
     def get_device_code() -> models.DeviceCode:
         """
@@ -223,7 +221,6 @@ class Seedr(BaseClient):
             **httpx_kwargs,
         )
 
-    # Public Instance Methods (Core API Logic)
     def refresh_token(self) -> models.RefreshTokenResult:
         """
         Manually refreshes the access token.
@@ -734,7 +731,6 @@ class Seedr(BaseClient):
         except APIError as e:
             raise AuthenticationError(error_message, response=e.response) from e
 
-    # Dunder Methods (Context Management)
     def close(self) -> None:
         if self._manages_client_lifecycle:
             self._client.close()
