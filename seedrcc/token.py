@@ -66,8 +66,6 @@ class Token:
     def from_dict(cls, data: Dict[str, Any]) -> "Token":
         """
         Creates a Token object from a dictionary.
-        Raises:
-            TokenError: If the dictionary is missing required fields.
         """
         try:
             return cls(**data)
@@ -78,8 +76,6 @@ class Token:
     def from_json(cls, json_str: str) -> "Token":
         """
         Creates a Token object from a JSON string.
-        Raises:
-            TokenError: If the JSON string is malformed.
         """
         try:
             data = json.loads(json_str)
@@ -91,13 +87,9 @@ class Token:
     def from_base64(cls, b64_str: str) -> "Token":
         """
         Creates a Token object from a Base64-encoded JSON string.
-        Raises:
-            TokenError: If the Base64 string is invalid or the decoded
-                        JSON is malformed.
         """
         try:
             json_str = base64.b64decode(b64_str).decode("utf-8")
             return cls.from_json(json_str)
         except (ValueError, TypeError) as e:
             raise TokenError(f"Failed to decode Base64 string: {e}") from e
-
