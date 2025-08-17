@@ -45,6 +45,12 @@ Install the library from PyPI using `pip` or your favorite package manager.
 pip install seedrcc
 ```
 
+Or, install the latest version directly from GitHub:
+
+```bash
+pip install git+https://github.com/hemantapkh/seedrcc.git
+```
+
 ### Synchronous Usage
 
 Here's a quick example of how to get started with the synchronous client.
