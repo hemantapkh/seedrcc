@@ -33,6 +33,6 @@ except seedrcc.exceptions.SeedrError as e:
 
 ::: seedrcc.exceptions
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_source: true
       show_bases: true
