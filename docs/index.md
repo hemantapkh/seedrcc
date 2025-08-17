@@ -87,7 +87,7 @@ if __name__ == "__main__":
 This is the recommended authentication method as it provides a long-term session. The process involves three steps:
 
 1.  **Get Device Code:** Use `Seedr.get_device_code()` to get the device and user codes.
-2.  **Authorize:** Open the `verification_url` (e.g., `https://www.seedr.cc/devices`) in a browser and enter the `user_code`.
+2.  **Authorize:** Open the `verification_url` ([https://www.seedr.cc/devices](https://www.seedr.cc/devices)) in a browser and enter the `user_code`.
 3.  **Create Client:** Once authorized, create the client using the `device_code`.
 
 ```python

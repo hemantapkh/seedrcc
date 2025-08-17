@@ -1,8 +1,12 @@
 <p align="center">
-<img src="https://raw.githubusercontent.com/hemantapkh/seedrcc/master/docs/images/seedrcc.png" align="center" height=250 alt="seedrpy logo" />
+  <img src="https://raw.githubusercontent.com/hemantapkh/seedrcc/master/docs/images/seedrcc.png" width="250" alt="seedrcc logo">
 </p>
 
-<h2 align='center'>Python API Wrapper of Seedr.cc</h2>
+<h1 align="center">seedrcc</h1>
+
+<p align="center">
+  <strong>A complete, modern, and fully-featured Python API wrapper for seedr.cc.</strong>
+</p>
 
 <p align="center">
 <a href="https://pypi.org/project/seedrcc">
@@ -11,202 +15,95 @@
 <a href="https://pepy.tech/project/seedrcc">
 <img src='https://pepy.tech/badge/seedrcc'>
 </a>
-<a href="https://tinyurl.com/visitors-stats">
-<img src='https://visitor-badge.laobi.icu/badge?page_id=hemantapkh.seedrcc'>
-</a>
 <a href="https://github.com/hemantapkh/seedrcc/stargazers">
 <img src="https://img.shields.io/github/stars/hemantapkh/seedrcc" alt="Stars"/>
 </a>
 <a href="https://github.com/hemantapkh/seedrcc/issues">
 <img src="https://img.shields.io/github/issues/hemantapkh/seedrcc" alt="Issues"/>
 </a>
-<br>
-<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png">
+</p>
 
-## Table of Contents
-- [Installation](#installation)
-- [How I got the API endpoints?](#how-i-got-the-api-endpoints)
-- [Start Guide](#start-guide)
-    - [Getting Token](#getting-token)
-        - [Logging with Username and Password](#logging-with-username-and-password)
-        - [Authorizing with device code](#authorizing-with-device-code)
-    - [Basic Examples](#basic-examples)
-    - [Managing token](#managing-token)
-        - [Callback function](#callback-function)
-            - [Function with single argument](#callback-function-with-single-argument)
-            - [Function with multiple arguments](#callback-function-with-multiple-arguments)
-- [Detailed Documentation](#documentation)
-- [Contributing](#contributing)
-- [Projects using this API](#projects-using-this-api)
-- [License](#license)
+---
+
+**seedrcc** provides a clean, robust, and fully-featured interface for interacting with the Seedr API, with first-class support for both synchronous and asynchronous operations.
+
+## Features
+
+- **Complete API Coverage:** All major Seedr API endpoints are supported.
+- **Sync & Async:** Use `seedrcc.Seedr` for a synchronous client or `seedrcc.AsyncSeedr` for an asynchronous one.
+- **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
+- **Modern & Typed:** Built with modern Python features and fully type-hinted for a superior developer experience.
+- **Pydantic Models:** API responses are parsed into clean, easy-to-use Pydantic models.
 
 ## Installation
-- Install via [PyPi](https://www.pypi.org/project/seedrcc)
-    ```bash
-    pip install seedrcc
-    ```
 
-- Install from the source
-    ```bash
-    git clone https://github.com/hemantapkh/seedrcc && cd seedrcc && python setup.py sdist && pip install dist/*
-    ```
+Install from PyPI:
 
-## How I got the API endpoints
-
-Seedr don't provide an [API](https://www.seedr.cc/docs/api/rest/v1/) to the freemium users. However, Seedr has a [chrome](https://github.com/DannyZB/seedr_chrome) and [kodi](https://github.com/DannyZB/seedr_chrome) extension that works for all users. Some of the endpoints (very few) are extracted from these extensions. 
-
-After analyzing the requests sent by the seedr site (old version), I found the seedr-site API (which needs captcha) are quiet similar to that of seedr-chrome and seedr-kode API. So, I just predicted the other endpoints.
-
-**This API works for all users since it uses the seedr-chrome and seedr-kodi API.**
-
-## Start guide
-
-----
-
-### Getting Token
-
-There are two methods to get the account token. You can login with username/password or by authorizing with device code. 
-
-
-#### Logging with Username and Password
-
-This method uses the seedr Chrome extension API.
-```python
-from seedrcc import Login
-
-seedr = Login('foo@bar.com', 'password')
-
-response = seedr.authorize()
-print(response)
-
-# Getting the token 
-print(seedr.token)
+```bash
+pip install seedrcc
 ```
 
-### Authorizing with device code
+Or, install the latest version directly from GitHub:
 
-This method uses the seedr kodi API.
-
-**To use this method, generate a device & user code. Paste the user code in https://seedr.cc/devices and authorize with the device code.**
-
-```python
-from seedrcc import Login
-
-seedr = Login()
-
-deviceCode = seedr.getDeviceCode()
-# Go to https://seedr.cc/devices and paste the user code
-print(deviceCode)
-
-# Authorize with device code
-response = seedr.authorize(deviceCode['device_code'])
-print(response)
-
-# Getting the token
-seedr.token
+```bash
+pip install git+https://github.com/hemantapkh/seedrcc.git
 ```
 
-**✏️ Note: You must use the token from the instance variable ‘token’ instead of the ‘access_token’ or ‘refresh_token’ from the response.**
+## Usage
 
-----
-
-### Basic Examples
-
-For all available methods, please refer to the [documentation](https://seedrcc.readthedocs.org/en/latest/). Also, it is recommended to set a callback function, read more about it [here](#managing-token).
+### Synchronous Example (with Device Authentication)
 
 ```python
 from seedrcc import Seedr
 
-account = Seedr(token='token')
+# 1. Get the device and user codes from the API.
+codes = Seedr.get_device_code()
 
-# Getting user settings
-print(account.getSettings())
+# 2. Open the verification URL (https://seedr.cc/devices) and enter the user code.
+print(f"Please go to {codes.verification_url} and enter the code: {codes.user_code}")
+input("Press Enter after authorizing the device.")
 
-# Adding torrent
-response = account.addTorrent('magnetlink')
-print(response)
-
-#Listing folder contents
-response = account.listContents()
-print(response)
+# 3. Create the client using the device_code.
+with Seedr.from_device_code(codes.device_code) as client:
+    settings = client.get_settings()
+    print(f"Success! Hello, {settings.account.username}")
 ```
 
-----
-
-### Managing token
-
-The access token may expire after certain time and need to be refreshed. However, this process is handled by the module and you don't have to worry about it. 
-
-**⚠️ The token is updated after this process and if you are storing the token in a file/database and reading the token from it, It is recommended to update the token in the database/file using the callback function. If you do not update the token in such case, the module will refresh the token in each session which will cost extra request and increase the response time.**
-
-#### Callback function
-
-You can set a callback function which will be called automatically each time the token is refreshed. You can use such function to deal with the refreshed token.
-
-**✏️ Note: The callback function must have at least one parameter. The first parameter of the callback function will be the updated token.**
-
-#### Callback function with single argument
-
-Here is an example of callback function with a single argument which read and update the token in a file called `token.txt`.
+### Asynchronous Example (with Password Authentication)
 
 ```python
-# Read the token from token.txt
-token = open('token.txt', 'r').read().strip()
+import asyncio
+from seedrcc import AsyncSeedr
 
-# Defining the callback function
-def afterRefresh(token):
-    with open('token.txt', 'w') as f:
-        f.write(token)
+async def main():
+    # Authenticate using your username and password.
+    async with AsyncSeedr.from_password("your_email@example.com", "your_password") as client:
+        # Get your account settings.
+        settings = await client.get_settings()
+        print(f"Hello, {settings.account.username}!")
 
-account = Seedr(token, callbackFunc=afterRefresh)
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-#### Callback function with multiple arguments
+## How I Found the Endpoints
 
-In situations where you need to pass multiple arguments to the callback function, you can use the lambda function. Callback function with multiple arguments can be useful if your app is dealing with multiple users.
+While Seedr.cc offers a premium [API](https://www.seedr.cc/docs/api/rest/v1/), it is not available to free users. This library was built by studying the network requests from the official **[Kodi](https://github.com/DannyZB/seedr_kodi)** and **[Chrome](https://github.com/DannyZB/seedr_chrome)** extensions.
 
-Here is an example of callback function with multiple arguments which will update the token of certain user in the database after the token of that user is refreshed.
-
-```python
-# Defining the callback function
-def afterRefresh(token, userId):
-    # Add your code to deal with the database
-    print(f'Token of the user {userId} is updated.')
-
-# Creating a Seedr object for user 12345
-account = Seedr(token='token', callbackFunc=lambda token: afterRefresh(token, userId='12345'))
-```
-
-----
+Further analysis of the main Seedr website's network traffic revealed a very similar API pattern, which made it possible to implement the full feature set. Because the library uses the same API as the official tools, it works reliably for all users.
 
 ## Documentation
 
-The detailled documentation of each methods is available [here](https://seedrcc.readthedocs.org/en/latest/).
-
+For a complete guide to every available method, data model, and advanced features like saving sessions, please see the **[Full Documentation](https://seedrcc.readthedocs.io/)**.
 
 ## Contributing
 
-Any contributions you make are **greatly appreciated**.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-
-*Thanks to every [contributors](https://github.com/hemantapkh/seedrcc/graphs/contributors) who have contributed in this project.*
-
-## Projects using this API
-
-* Torrent Seedr - Telegram bot to download torrents ([Source code](https://github.com/hemantapkh/torrentseedr), [Link](https://t.me/torrentseedrbot)).
-
-Want to list your project here? Just make a pull request.
+Contributions are welcome! If you'd like to help, please feel free to fork the repository, create a feature branch, and open a pull request.
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](https://github.com/hemantapkh/seedrcc/blob/main/LICENSE) for more information.
+This project is distributed under the MIT License. See `LICENSE` for more information.
 
 ---
+Author/Maintainer: [Hemanta Pokharel](https://hemantapkh.com) ([GitHub](https://github.com/hemantapkh))
 
-Author/Maintainer: [Hemanta Pokharel](https://twitter.com/hemantapkh)
