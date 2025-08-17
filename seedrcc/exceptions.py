@@ -77,3 +77,9 @@ class NetworkError(SeedrError):
     """Raised for network-level errors, such as timeouts or connection problems."""
 
     pass
+
+
+class TokenError(SeedrError):
+    """Raised for errors related to token serialization or deserialization."""
+
+    pass
