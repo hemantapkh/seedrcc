@@ -8,7 +8,7 @@ The `Token` object is a central piece of the client, holding the authentication 
 
 ::: seedrcc.token.Token
     options:
-      show_root_heading: false
+      show_root_heading: true
       show_source: false
       show_bases: false
       filters: ["!^_"]

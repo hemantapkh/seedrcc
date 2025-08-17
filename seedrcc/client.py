@@ -11,64 +11,19 @@ from .token import Token
 class Seedr(BaseClient):
     """Synchronous client for interacting with the Seedr API.
 
-    This client provides access to all the API endpoints and handles authentication.
+    Example:
+        ```python
+        from seedrcc import Seedr, Token
 
-    **Creating a Client:**
+        # Load a previously saved token from a JSON string
+        token_string = '{"access_token": "...", "refresh_token": "..."}'
+        token = Token.from_json(token_string)
 
-    There are two ways to initialize the client:
-
-    1.  **If you have a previously saved token**, you can instantiate the client directly.
-        This is the recommended approach for existing sessions.
-    2.  **If you need to authenticate for a new session**, use one of the factory
-        class methods below.
-
-    **Initializing with an existing token:**
-
-    The `Token` object can be created from a dictionary, a JSON string, or a Base64 string.
-
-    ```python
-    from seedrcc import Seedr, Token
-
-    # Example: From a JSON string (e.g., loaded from a file or database)
-    json_string = '{"access_token": "...", "refresh_token": "..."}'
-    token = Token.from_json(json_string)
-    # You can also use .from_dict() or .from_base64().
-
-    client = Seedr(token=token)
-    # You can now make authenticated requests
-    print(client.get_settings().account.username)
-    ```
-
-    **Authenticating to get a new token:**
-
-    Use one of the following factory methods:
-
-    - [`Seedr.from_password()`][seedrcc.client.Seedr.from_password]
-    - [`Seedr.from_device_code()`][seedrcc.client.Seedr.from_device_code]
-    - [`Seedr.from_refresh_token()`][seedrcc.client.Seedr.from_refresh_token]
-
-    **Customizing Network Requests:**
-
-    You can customize the underlying `httpx` client by passing arguments directly
-    to the factory methods, or by providing your own pre-configured client.
-
-    ```python
-    import httpx
-
-    # Example 1: Passing simple arguments like timeout and proxies
-    client = Seedr.from_password(
-        "user", "pass",
-        timeout=10.0,
-        proxies={"https": "https://myproxy.com"}
-    )
-
-    # Example 2: For advanced configuration, pass a pre-configured client
-    my_httpx_client = httpx.Client(
-        timeout=30.0,
-        limits=httpx.Limits(max_connections=100)
-    )
-    client = Seedr.from_password("user", "pass", httpx_client=my_httpx_client)
-    ```
+        # Initialize the client and make a request
+        with Seedr(token=token) as client:
+            settings = client.get_settings()
+            print(f"Hello, {settings.account.username}")
+        ```
     """
 
     _client: httpx.Client
@@ -79,13 +34,29 @@ class Seedr(BaseClient):
         token: Token,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.Client] = None,
+        timeout: float = 30.0,
+        proxies: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> None:
+        """Initializes the synchronous client with an existing token.
+
+        Args:
+            token: An authenticated `Token` object.
+            on_token_refresh: An optional callback function that is called with the new
+                `Token` object when the session is refreshed.
+            httpx_client: An optional, pre-configured `httpx.Client` instance.
+            timeout: The timeout for network requests in seconds.
+            proxies: An optional dictionary of proxies to use for requests.
+            **httpx_kwargs: Optional keyword arguments to pass to the `httpx.Client` constructor.
+                These are ignored if `httpx_client` is provided.
+        """
         super().__init__(token, on_token_refresh)
         if httpx_client is not None:
             self._client = httpx_client
             self._manages_client_lifecycle = False
         else:
+            httpx_kwargs.setdefault("timeout", timeout)
+            httpx_kwargs.setdefault("proxies", proxies)
             self._client = httpx.Client(**httpx_kwargs)
             self._manages_client_lifecycle = True
 

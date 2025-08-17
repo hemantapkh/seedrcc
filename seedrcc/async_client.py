@@ -13,64 +13,24 @@ from .token import Token
 class AsyncSeedr(BaseClient):
     """Asynchronous client for interacting with the Seedr API.
 
-    This client provides access to all the API endpoints and handles authentication.
+    Example:
+        ```python
+        import asyncio
+        from seedrcc import AsyncSeedr, Token
 
-    **Creating a Client:**
+        async def main():
+            # Load a previously saved token from a Base64 string
+            b64_string = "eydhY2Nlc3NfdG9rZW4nOiAnbmV2ZXIgZ29ubmEgZ2l2ZSB5b3UgdXAnfQ=="
+            token = Token.from_base64(b64_string)
 
-    There are two ways to initialize the client:
+            # Initialize the client and make a request
+            async with AsyncSeedr(token=token) as client:
+                settings = await client.get_settings()
+                print(f"Hello, {settings.account.username}")
 
-    1.  **If you have a previously saved token**, you can instantiate the client directly.
-        This is the recommended approach for existing sessions.
-    2.  **If you need to authenticate for a new session**, use one of the factory
-        class methods below.
-
-    **Initializing with an existing token:**
-
-    The `Token` object can be created from a dictionary, a JSON string, or a Base64 string.
-
-    ```python
-    from seedrcc import AsyncSeedr, Token
-
-    # Example: From a JSON string (e.g., loaded from a file or database)
-    json_string = '{"access_token": "...", "refresh_token": "..."}'
-    token = Token.from_json(json_string)
-    # You can also use .from_dict() or .from_base64().
-
-    client = AsyncSeedr(token=token)
-    # You can now make authenticated requests
-    settings = await client.get_settings()
-    ```
-
-    **Authenticating to get a new token:**
-
-    Use one of the following factory methods:
-
-    - [`AsyncSeedr.from_password()`][seedrcc.async_client.AsyncSeedr.from_password]
-    - [`AsyncSeedr.from_device_code()`][seedrcc.async_client.AsyncSeedr.from_device_code]
-    - [`AsyncSeedr.from_refresh_token()`][seedrcc.async_client.AsyncSeedr.from_refresh_token]
-
-    **Customizing Network Requests:**
-
-    You can customize the underlying `httpx` client by passing arguments directly
-    to the factory methods, or by providing your own pre-configured client.
-
-    ```python
-    import httpx
-
-    # Example 1: Passing simple arguments like timeout and proxies
-    client = await AsyncSeedr.from_password(
-        "user", "pass",
-        timeout=10.0,
-        proxies={"https": "https://myproxy.com"}
-    )
-
-    # Example 2: For advanced configuration, pass a pre-configured client
-    my_httpx_client = httpx.AsyncClient(
-        timeout=30.0,
-        limits=httpx.Limits(max_connections=100)
-    )
-    client = await AsyncSeedr.from_password("user", "pass", httpx_client=my_httpx_client)
-    ```
+        if __name__ == "__main__":
+            asyncio.run(main())
+        ```
     """
 
     _client: httpx.AsyncClient
@@ -81,13 +41,29 @@ class AsyncSeedr(BaseClient):
         token: Token,
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.AsyncClient] = None,
+        timeout: float = 30.0,
+        proxies: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> None:
+        """Initializes the asynchronous client with an existing token.
+
+        Args:
+            token: An authenticated `Token` object.
+            on_token_refresh: An optional callback function that is called with the new
+                `Token` object when the session is refreshed.
+            httpx_client: An optional, pre-configured `httpx.AsyncClient` instance.
+            timeout: The timeout for network requests in seconds.
+            proxies: An optional dictionary of proxies to use for requests.
+            **httpx_kwargs: Optional keyword arguments to pass to the `httpx.AsyncClient` constructor.
+                These are ignored if `httpx_client` is provided.
+        """
         super().__init__(token, on_token_refresh)
         if httpx_client is not None:
             self._client = httpx_client
             self._manages_client_lifecycle = False
         else:
+            httpx_kwargs.setdefault("timeout", timeout)
+            httpx_kwargs.setdefault("proxies", proxies)
             self._client = httpx.AsyncClient(**httpx_kwargs)
             self._manages_client_lifecycle = True
 

@@ -43,6 +43,12 @@ Install the library from PyPI using `pip` or your favorite package manager.
 pip install seedrcc
 ```
 
+Or, install the latest version directly from GitHub:
+
+```bash
+pip install git+https://github.com/hemantapkh/seedrcc.git
+```
+
 ## Basic Usage
 
 ### Synchronous
@@ -55,10 +61,6 @@ with Seedr.from_password("your_email@example.com", "your_password") as client:
     # Get your account settings
     settings = client.get_settings()
     print(f"Hello, {settings.account.username}!")
-
-    # Add a new torrent
-    torrent = client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
-    print(f"Added torrent: {torrent.title}")
 ```
 
 ### Asynchronous
@@ -74,17 +76,44 @@ async def main():
         settings = await client.get_settings()
         print(f"Hello, {settings.account.username}!")
 
-        # Add a new torrent
-        torrent = await client.add_torrent(magnet_link="magnet:?xt=urn:btih:...")
-        print(f"Added torrent: {torrent.title}")
-
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## Saving and Reusing a Token
+## Authentication Methods
 
-To avoid logging in every time, you can save the `Token` object after your first login and reuse it in the future.
+### Device Code Flow (Recommended)
+
+This is the recommended authentication method as it provides a long-term session. The process involves three steps:
+
+1.  **Get Device Code:** Use `Seedr.get_device_code()` to get the device and user codes.
+2.  **Authorize:** Open the `verification_url` (e.g., `https://www.seedr.cc/devices`) in a browser and enter the `user_code`.
+3.  **Create Client:** Once authorized, create the client using the `device_code`.
+
+```python
+from seedrcc import Seedr
+
+# 1. Get the device and user codes from the API.
+codes = Seedr.get_device_code()
+
+# 2. Display the authorization details for the user to act on.
+print(f"Please open this URL in your browser: {codes.verification_url}")
+print(f"And enter this code: {codes.user_code}")
+input("Press Enter after authorizing.")
+
+# 3. Create the client using the device_code from the initial request.
+with Seedr.from_device_code(codes.device_code) as client:
+    settings = client.get_settings()
+    print(f"Success! Hello, {settings.account.username}")
+```
+
+### Password Flow
+
+You can also authenticate directly with your username and password, as shown in the Basic Usage examples.
+
+## Saving and Reusing Your Session
+
+To avoid logging in every time, you can save the `Token` object after your first authentication and reuse it.
 
 The `Token` object has several methods to convert it for storage or use:
 
@@ -92,26 +121,26 @@ The `Token` object has several methods to convert it for storage or use:
 - [`token.to_base64()`][seedrcc.token.Token.to_base64]: Converts the token to a simple Base64 string, great for databases or environment variables.
 - [`token.to_dict()`][seedrcc.token.Token.to_dict]: Converts the token to a Python dictionary for in-memory use.
 
-You can then use the corresponding `Token.from_...()` method to load it back.
+You can then use the corresponding [`Token.from_...()`][seedrcc.token.Token.from_dict] method to load it back.
 
 ```python
 from seedrcc import Seedr, Token
 
 # Assume 'client' is an authenticated client from a previous session
-# client = Seedr.from_password("your_email@example.com", "your_password")
+# client = Seedr.from_password(...) or Seedr.from_device_code(...)
 
-# 1. Get the token and convert it to a JSON string
+# 1. Get the token and convert it to a JSON string.
 token = client.token
 json_string = token.to_json()
 
 # You would typically save this string to a file or database.
-print(f"Saved token: {json_string}")
 
+# --- In a new session ---
 
-# 2. In a new session, load the token from the saved string
+# 2. Load the token from the saved string.
 reloaded_token = Token.from_json(json_string)
 
-# 3. Initialize the client directly with the reloaded token
+# 3. Initialize the client directly with the reloaded token.
 with Seedr(token=reloaded_token) as new_client:
     settings = new_client.get_settings()
     print(f"Successfully re-authenticated as {settings.account.username}")
@@ -119,11 +148,13 @@ with Seedr(token=reloaded_token) as new_client:
 
 ## Handling Token Refreshes
 
-The client will automatically refresh expired access tokens. If you are storing the token to reuse it later, you should provide a callback function to be notified of the new token.
+The client automatically handles token refreshes. However, if you load an old token when your program starts, the client must perform a refresh on the first API call, which adds a delay.
 
-The `on_token_refresh` argument can be passed to any factory method (`from_password`, etc.) or to the client constructor.
+To avoid this, you can provide an `on_token_refresh` callback. This function is called whenever a refresh happens, giving you the new `Token` object so you can save it. By saving the new token, your program will start with a fresh token on its next run.
 
-When using the `AsyncSeedr` client, you can provide an `async` function for the callback. If a regular synchronous function is provided instead, it will be safely executed in a separate thread to prevent blocking the asynchronous event loop.
+Your callback function will receive the new `Token` object as its first argument.
+
+When using the `AsyncSeedr` client, you can provide an `async` function for the callback. If a regular synchronous function is provided instead, it will be safely executed in a separate thread.
 
 **Callback with a single argument:**
 
@@ -147,6 +178,7 @@ If you need to pass additional arguments to your callback (like a user ID), you 
 
 ```python
 import functools
+from seedrcc import AsyncSeedr, Seedr, Token
 
 # Synchronous example with lambda
 def save_token_for_user(token: Token, user_id: int):
@@ -166,13 +198,19 @@ async def save_token_for_user_async(token: Token, user_id: int):
 
 user_id = 456
 async_callback = functools.partial(save_token_for_user_async, user_id=user_id)
-async_client = await AsyncSeedr.from_password(
-    "user", "pass", on_token_refresh=async_callback
-)
+# async_client = await AsyncSeedr.from_password(
+#     "user", "pass", on_token_refresh=async_callback
+# )
 ```
 
 ## Next Steps
 
-- **API Reference:** Dive into the [Synchronous Client](sync_client.md) or the [Asynchronous Client](async_client.md) reference for detailed information on all available methods.
+Ready to explore the full API? The reference documentation provides a complete guide to every available method, from adding torrents and managing files to checking your account details.
+
+- **API Reference:**
+  - [Synchronous Client](sync_client.md)
+  - [Asynchronous Client](async_client.md)
+  - [Data Models](models.md)
+  - [Exceptions](exceptions.md)
 - **License:** This project is licensed under the MIT License. See the `LICENSE` file for details.
 - **Contributing:** Contributions are welcome! Please see the project on [GitHub](https://github.com/hemantapkh/seedrcc).
