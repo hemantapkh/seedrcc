@@ -11,8 +11,7 @@ from .token import Token
 
 
 class AsyncSeedr(BaseClient):
-    """
-    Asynchronous client for interacting with the Seedr API.
+    """Asynchronous client for interacting with the Seedr API.
 
     This client provides access to all the API endpoints and handles authentication.
     You can use one of the factory class methods to create an instance:
@@ -20,39 +19,42 @@ class AsyncSeedr(BaseClient):
     - `AsyncSeedr.from_device_code()`
     - `AsyncSeedr.from_refresh_token()`
 
-    Initializing with an existing token:
-        If you have a previously saved token, you can initialize the client directly.
+    **Initializing with an existing token:**
 
-        ```python
-        from seedrcc import AsyncSeedr, Token
+    If you have a previously saved token, you can initialize the client directly.
 
-        # Load your token data (e.g., from a file or database)
-        token_data = {"access_token": "...", "refresh_token": "..."}
-        token = Token.from_dict(token_data)
+    ```python
+    from seedrcc import AsyncSeedr, Token
 
-        client = AsyncSeedr(token=token)
-        # You can now make authenticated requests
-        settings = await client.get_settings()
-        ```
+    # Load your token data (e.g., from a file or database)
+    token_data = {"access_token": "...", "refresh_token": "..."}
+    token = Token.from_dict(token_data)
 
-    Using a custom `httpx.AsyncClient`:
-        For advanced configuration (e.g., custom timeouts, proxies, headers),
-        you can pass your own `httpx.AsyncClient` instance.
+    client = AsyncSeedr(token=token)
+    # You can now make authenticated requests
+    settings = await client.get_settings()
+    ```
 
-        ```python
-        import httpx
+    **Using a custom `httpx.AsyncClient`:**
 
-        my_httpx_client = httpx.AsyncClient(timeout=30.0)
-        client = await AsyncSeedr.from_password("user", "pass", httpx_client=my_httpx_client)
-        ```
+    For advanced configuration (e.g., custom timeouts, proxies, headers),
+    you can pass your own `httpx.AsyncClient` instance.
 
-    Using `httpx` keyword arguments:
-        For simpler customizations, you can pass `httpx.AsyncClient` arguments directly
-        to the factory methods.
+    ```python
+    import httpx
 
-        ```python
-        client = await AsyncSeedr.from_password("user", "pass", timeout=30.0)
-        ```
+    my_httpx_client = httpx.AsyncClient(timeout=30.0)
+    client = await AsyncSeedr.from_password("user", "pass", httpx_client=my_httpx_client)
+    ```
+
+    **Using `httpx` keyword arguments:**
+
+    For simpler customizations, you can pass `httpx.AsyncClient` arguments directly
+    to the factory methods.
+
+    ```python
+    client = await AsyncSeedr.from_password("user", "pass", timeout=30.0)
+    ```
     """
 
     _client: httpx.AsyncClient

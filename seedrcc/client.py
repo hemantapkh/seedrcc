@@ -9,8 +9,7 @@ from .token import Token
 
 
 class Seedr(BaseClient):
-    """
-    Synchronous client for interacting with the Seedr API.
+    """Synchronous client for interacting with the Seedr API.
 
     This client provides access to all the API endpoints and handles authentication.
     It is recommended to use one of the factory class methods to create an instance:
@@ -18,39 +17,42 @@ class Seedr(BaseClient):
     - `Seedr.from_device_code()`
     - `Seedr.from_refresh_token()`
 
-    Initializing with an existing token:
-        If you have a previously saved token, you can initialize the client directly.
+    **Initializing with an existing token:**
 
-        ```python
-        from seedrcc import Seedr, Token
+    If you have a previously saved token, you can initialize the client directly.
 
-        # Load your token data (e.g., from a file or database)
-        token_data = {"access_token": "...", "refresh_token": "..."}
-        token = Token.from_dict(token_data)
+    ```python
+    from seedrcc import Seedr, Token
 
-        client = Seedr(token=token)
-        # You can now make authenticated requests
-        print(client.get_settings().account.username)
-        ```
+    # Load your token data (e.g., from a file or database)
+    token_data = {"access_token": "...", "refresh_token": "..."}
+    token = Token.from_dict(token_data)
 
-    Using a custom `httpx.Client`:
-        For advanced configuration (e.g., custom timeouts, proxies, headers),
-        you can pass your own `httpx.Client` instance.
+    client = Seedr(token=token)
+    # You can now make authenticated requests
+    print(client.get_settings().account.username)
+    ```
 
-        ```python
-        import httpx
+    **Using a custom `httpx.Client`:**
 
-        my_httpx_client = httpx.Client(timeout=30.0)
-        client = Seedr.from_password("user", "pass", httpx_client=my_httpx_client)
-        ```
+    For advanced configuration (e.g., custom timeouts, proxies, headers),
+    you can pass your own `httpx.Client` instance.
 
-    Using `httpx` keyword arguments:
-        For simpler customizations, you can pass `httpx.Client` arguments directly
-        to the factory methods.
+    ```python
+    import httpx
 
-        ```python
-        client = Seedr.from_password("user", "pass", timeout=30.0)
-        ```
+    my_httpx_client = httpx.Client(timeout=30.0)
+    client = Seedr.from_password("user", "pass", httpx_client=my_httpx_client)
+    ```
+
+    **Using `httpx` keyword arguments:**
+
+    For simpler customizations, you can pass `httpx.Client` arguments directly
+    to the factory methods.
+
+    ```python
+    client = Seedr.from_password("user", "pass", timeout=30.0)
+    ```
     """
 
     _client: httpx.Client

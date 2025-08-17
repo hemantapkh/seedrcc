@@ -1,15 +1,29 @@
 site_name: seedrcc
+repo_url: https://github.com/hemantapkh/seedrcc
+repo_name: hemantapkh/seedrcc
+
 theme:
   name: material
+  language: en
   logo: images/seedrpy.png
   favicon: images/seedrpy.png
+  icon:
+    repo: fontawesome/brands/github
   features:
-    - content.code.copy
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.footer
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
+      primary: green
+      accent: amber
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
@@ -17,9 +31,12 @@ theme:
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
+      primary: green
+      accent: amber
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+
 plugins:
   - search
   - mkdocstrings:
@@ -47,3 +64,7 @@ nav:
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
