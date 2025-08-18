@@ -296,7 +296,6 @@ class ListContentsResult(Folder):
     space_max: int = 0
     saw_walkthrough: int = 0
     type: str = ""
-    raw: str = "asd"
     t: List[Optional[datetime]] = field(default_factory=list)
 
     @classmethod
@@ -305,7 +304,6 @@ class ListContentsResult(Folder):
         instance = cls(
             id=folder.id,
             name=folder.name,
-            raw="asd",
             fullname=folder.fullname,
             size=folder.size,
             last_update=folder.last_update,
