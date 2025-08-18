@@ -694,7 +694,7 @@ class AsyncSeedr(BaseClient):
             if inspect.iscoroutinefunction(self._on_token_refresh):
                 await self._on_token_refresh(self._token)
             else:
-                anyio.to_thread.run_sync(self._on_token_refresh, self._token)
+                await anyio.to_thread.run_sync(self._on_token_refresh, self._token)
 
         return models.RefreshTokenResult.from_dict(response)
 
@@ -777,4 +777,3 @@ class AsyncSeedr(BaseClient):
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
-
