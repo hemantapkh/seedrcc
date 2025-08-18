@@ -662,7 +662,7 @@ class AsyncSeedr(BaseClient):
                     self._client, http_method, url, params=params, files=files, **kwargs
                 )
 
-            if isinstance(data, dict) and data.get("result") is not True and "access_token" not in data:
+            if isinstance(data, dict) and data.get("result", True) is not True:
                 raise APIError(data.get("error", "Unknown API error"))
 
             return data
