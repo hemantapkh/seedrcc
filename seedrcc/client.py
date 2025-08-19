@@ -35,7 +35,7 @@ class Seedr(BaseClient):
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.Client] = None,
         timeout: float = 30.0,
-        proxies: Optional[Dict[str, str]] = None,
+        proxy: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> None:
         """Initializes the synchronous client with an existing token.
@@ -46,7 +46,7 @@ class Seedr(BaseClient):
                 `Token` object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.Client` instance.
             timeout: The timeout for network requests in seconds.
-            proxies: An optional dictionary of proxies to use for requests.
+            proxy: An optional dictionary of proxy to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.Client` constructor.
                 These are ignored if `httpx_client` is provided.
         """
@@ -56,7 +56,7 @@ class Seedr(BaseClient):
             self._manages_client_lifecycle = False
         else:
             httpx_kwargs.setdefault("timeout", timeout)
-            httpx_kwargs.setdefault("proxies", proxies)
+            httpx_kwargs.setdefault("proxy", proxy)
             self._client = httpx.Client(**httpx_kwargs)
             self._manages_client_lifecycle = True
 
@@ -97,7 +97,7 @@ class Seedr(BaseClient):
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.Client] = None,
         timeout: float = 30.0,
-        proxies: Optional[Dict[str, str]] = None,
+        proxy: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """
@@ -110,7 +110,7 @@ class Seedr(BaseClient):
                 Token object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.Client` instance.
             timeout: The timeout for network requests in seconds.
-            proxies: A dictionary of proxies to use for requests.
+            proxy: A dictionary of proxy to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.Client` constructor.
                 These are ignored if `httpx_client` is provided.
 
@@ -137,7 +137,7 @@ class Seedr(BaseClient):
             on_token_refresh,
             httpx_client,
             timeout=timeout,
-            proxies=proxies,
+            proxy=proxy,
             **httpx_kwargs,
         )
 
@@ -148,7 +148,7 @@ class Seedr(BaseClient):
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.Client] = None,
         timeout: float = 30.0,
-        proxies: Optional[Dict[str, str]] = None,
+        proxy: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """
@@ -163,7 +163,7 @@ class Seedr(BaseClient):
                 Token object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.Client` instance.
             timeout: The timeout for network requests in seconds.
-            proxies: A dictionary of proxies to use for requests.
+            proxy: A dictionary of proxy to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.Client` constructor.
                 These are ignored if `httpx_client` is provided.
 
@@ -190,7 +190,7 @@ class Seedr(BaseClient):
             on_token_refresh,
             httpx_client,
             timeout=timeout,
-            proxies=proxies,
+            proxy=proxy,
             **httpx_kwargs,
         )
 
@@ -201,7 +201,7 @@ class Seedr(BaseClient):
         on_token_refresh: Optional[Callable[[Token], None]] = None,
         httpx_client: Optional[httpx.Client] = None,
         timeout: float = 30.0,
-        proxies: Optional[Dict[str, str]] = None,
+        proxy: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """
@@ -213,7 +213,7 @@ class Seedr(BaseClient):
                 Token object when the session is refreshed.
             httpx_client: An optional, pre-configured `httpx.Client` instance.
             timeout: The timeout for network requests in seconds.
-            proxies: A dictionary of proxies to use for requests.
+            proxy: A dictionary of proxy to use for requests.
             **httpx_kwargs: Optional keyword arguments to pass to the `httpx.Client` constructor.
                 These are ignored if `httpx_client` is provided.
 
@@ -240,7 +240,7 @@ class Seedr(BaseClient):
             on_token_refresh,
             httpx_client,
             timeout=timeout,
-            proxies=proxies,
+            proxy=proxy,
             **httpx_kwargs,
         )
 
@@ -708,12 +708,12 @@ class Seedr(BaseClient):
         on_token_refresh: Optional[Callable[[Token], None]],
         httpx_client: Optional[httpx.Client],
         timeout: float = 30.0,
-        proxies: Optional[Dict[str, str]] = None,
+        proxy: Optional[Dict[str, str]] = None,
         **httpx_kwargs: Any,
     ) -> "Seedr":
         """A factory helper that orchestrates the authentication process and constructs the client."""
         httpx_kwargs.setdefault("timeout", timeout)
-        httpx_kwargs.setdefault("proxies", proxies)
+        httpx_kwargs.setdefault("proxy", proxy)
         client = httpx_client or httpx.Client(**httpx_kwargs)
         success = False
         try:
@@ -761,4 +761,3 @@ class Seedr(BaseClient):
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
-
