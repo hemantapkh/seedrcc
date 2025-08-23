@@ -87,6 +87,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+<a name="how-i-got-the-api-endpoints"></a>
 ## 🗺️ How I Found the Endpoints
 
 While Seedr.cc offers a premium [API](https://www.seedr.cc/docs/api/rest/v1/), it is not available to free users. This library was built by studying the network requests from the official **[Kodi](https://github.com/DannyZB/seedr_kodi)** and **[Chrome](https://github.com/DannyZB/seedr_chrome)** extensions.
