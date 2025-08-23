@@ -5,7 +5,7 @@
 <h1 align="center">seedrcc</h1>
 
 <p align="center">
-  <strong>A complete and fully-featured Python API wrapper for seedr.cc.</strong>
+  <strong>A comprehensive Python API wrapper for seedr.cc.</strong>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 ---
 
-**seedrcc** provides a clean, complete, and fully-featured Python interface for interacting with the Seedr API, with support for both synchronous and asynchronous operations.
+**seedrcc** provides a clean Python interface for the Seedr API, with support for both synchronous and asynchronous operations.
 
 ## Features
 
