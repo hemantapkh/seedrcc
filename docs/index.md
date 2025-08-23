@@ -200,9 +200,9 @@ async def save_token_for_user_async(token: Token, user_id: int):
 
 user_id = 456
 async_callback = functools.partial(save_token_for_user_async, user_id=user_id)
-# async_client = await AsyncSeedr.from_password(
-#     "user", "pass", on_token_refresh=async_callback
-# )
+async_client = await AsyncSeedr.from_password(
+    "user", "pass", on_token_refresh=async_callback
+)
 ```
 
 ## Next Steps
