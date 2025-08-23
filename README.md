@@ -27,9 +27,23 @@
 
 **seedrcc** provides a clean, complete, and fully-featured Python interface for interacting with the Seedr API, with support for both synchronous and asynchronous operations.
 
+<details>
+<summary><strong>Table of Contents</strong></summary>
+
+- [✨ Features](#-features)
+- [📦 Installation](#-installation)
+- [🚀 Usage](#-usage)
+- [🗺️ How I Found the Endpoints](#️-how-i-found-the-endpoints)
+- [📚 Documentation](#-documentation)
+- [🙌 Contributing](#-contributing)
+- [📄 License](#-license)
+
+</details>
+
 ## ✨ Features
 
 - **Complete API Coverage:** All major Seedr API endpoints are supported.
+- **Works for All Users:** Fully functional for both free and premium Seedr accounts.
 - **Sync & Async:** Includes `seedrcc.Seedr` for synchronous operations and `seedrcc.AsyncSeedr` for asynchronous ones.
 - **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
 - **Fully Typed:** Provides type hints for all methods and models to improve code quality and clarity.
