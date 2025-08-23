@@ -30,6 +30,7 @@
 ## Features
 
 - **Complete API Coverage:** All major Seedr API endpoints are supported.
+- **Works for All Users:** Fully functional for both free and premium Seedr accounts.
 - **Sync & Async:** Includes `seedrcc.Seedr` for synchronous operations and `seedrcc.AsyncSeedr` for asynchronous ones.
 - **Robust Authentication:** Handles all authentication flows, including automatic token refreshes.
 - **Fully Typed:** Provides type hints for all methods and models to improve code quality and clarity.
