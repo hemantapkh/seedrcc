@@ -354,7 +354,7 @@ class FetchFileResult(_BaseModel):
     result: bool
     url: str
     name: str
-    size: int
+    size: Optional[int]
     code: Optional[int] = None
 
 
