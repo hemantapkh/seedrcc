@@ -354,8 +354,6 @@ class FetchFileResult(_BaseModel):
     result: bool
     url: str
     name: str
-    size: Optional[int] = None
-    code: Optional[int] = None
 
 
 @dataclass(frozen=True)
