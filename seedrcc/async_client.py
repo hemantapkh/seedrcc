@@ -389,7 +389,7 @@ class AsyncSeedr(BaseClient):
         Create a link of a file.
 
         Args:
-            file_id (str): The file id to fetch.
+            file_id (str): The file id to fetch. This is the `folder_file_id` from the `list_contents` method.
 
         Returns:
             An object containing the file details and download URL.
