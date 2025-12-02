@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Type
-
+import json
 import httpx
+import json
 
 from . import _constants, _utils, models
 from ._base import BaseClient
@@ -645,13 +646,19 @@ class Seedr(BaseClient):
             params["func"] = func
 
         response = self._make_http_request(self._client, http_method, url, params=params, files=files, **kwargs)
-        data = response.json()
+        try:
+            data = response.json()
+        except json.JSONDecodeError as e:
+            raise APIError("Invalid JSON response from API") from e
 
         if isinstance(data, dict) and data.get("error") == "expired_token":
             self._refresh_access_token()
             params["access_token"] = self._token.access_token
             response = self._make_http_request(self._client, http_method, url, params=params, files=files, **kwargs)
-            data = response.json()
+            try:
+                data = response.json()
+            except json.JSONDecodeError as e:
+                raise APIError("Invalid JSON response from API after token refresh") from e
 
         if response.is_server_error:
             message = f"Server error: {response.status_code} {response.reason_phrase}"

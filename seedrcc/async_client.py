@@ -1,6 +1,6 @@
 import inspect
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
-
+import json
 import anyio
 import httpx
 
@@ -653,7 +653,10 @@ class AsyncSeedr(BaseClient):
             params["func"] = func
 
         response = await self._make_http_request(self._client, http_method, url, params=params, files=files, **kwargs)
-        data = response.json()
+        try:
+            data = response.json()
+        except json.JSONDecodeError as e:
+            raise APIError("Invalid JSON response from API") from e
 
         if isinstance(data, dict) and data.get("error") == "expired_token":
             await self._refresh_access_token()
@@ -661,7 +664,10 @@ class AsyncSeedr(BaseClient):
             response = await self._make_http_request(
                 self._client, http_method, url, params=params, files=files, **kwargs
             )
-            data = response.json()
+            try:
+                data = response.json()
+            except json.JSONDecodeError as e:
+                raise APIError("Invalid JSON response from API after token refresh") from e
 
         if response.is_server_error:
             message = f"Server error: {response.status_code} {response.reason_phrase}"
