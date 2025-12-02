@@ -652,41 +652,57 @@ class AsyncSeedr(BaseClient):
         if func:
             params["func"] = func
 
-        try:
-            data = await self._make_http_request(self._client, http_method, url, params=params, files=files, **kwargs)
+        response = await self._make_http_request(self._client, http_method, url, params=params, files=files, **kwargs)
+        data = response.json()
 
-            if isinstance(data, dict) and data.get("error") == "expired_token":
-                await self._refresh_access_token()
-                params["access_token"] = self._token.access_token
-                data = await self._make_http_request(
-                    self._client, http_method, url, params=params, files=files, **kwargs
-                )
+        if isinstance(data, dict) and data.get("error") == "expired_token":
+            await self._refresh_access_token()
+            params["access_token"] = self._token.access_token
+            response = await self._make_http_request(
+                self._client, http_method, url, params=params, files=files, **kwargs
+            )
+            data = response.json()
 
-            if isinstance(data, dict) and data.get("result", True) is not True:
-                raise APIError(data.get("error", "Unknown API error"))
+        if response.is_server_error:
+            message = f"Server error: {response.status_code} {response.reason_phrase}"
+            raise ServerError(message, response=response)
 
-            return data
-        except APIError as e:
-            if e.response and e.response.status_code == 401:
-                raise AuthenticationError("Invalid or expired token.", response=e.response) from e
-            raise
+        if response.is_client_error:
+            error = data.get("error", f"API error: {response.status_code}")
+            if response.status_code == 401:
+                raise AuthenticationError(error, response=response)
+            raise APIError(error, response=response)
+
+        if isinstance(data, dict) and data.get("result", True) is not True:
+            raise APIError(data.get("error", "Unknown API error"), response=response)
+
+        return data
 
     async def _refresh_access_token(self) -> models.RefreshTokenResult:
         """Refreshes the access token using the refresh token or device code."""
         if self._token.refresh_token:
-            data = _utils.prepare_refresh_token_payload(self._token.refresh_token)
-            response = await self._api_request("post", "", data=data, url=_constants.TOKEN_URL)
+            payload = _utils.prepare_refresh_token_payload(self._token.refresh_token)
+            response = await self._make_http_request(self._client, "post", _constants.TOKEN_URL, data=payload)
         elif self._token.device_code:
             params = _utils.prepare_device_code_params(self._token.device_code)
-            response = await self._api_request("get", "", params=params, url=_constants.DEVICE_AUTHORIZE_URL)
+            response = await self._make_http_request(
+                self._client, "get", _constants.DEVICE_AUTHORIZE_URL, params=params
+            )
         else:
-            raise AuthenticationError("Session expired. No refresh token or device code available.")
+            raise AuthenticationError("No refresh token or device code available to refresh the session.")
 
-        if "access_token" not in response:
-            raise AuthenticationError("Token refresh failed. The response did not contain a new access token.")
+        if not response.is_success:
+            raise AuthenticationError("Failed to refresh token", response=response)
+
+        response_data = response.json()
+        if "access_token" not in response_data:
+            raise AuthenticationError(
+                "Token refresh failed. The response did not contain a new access token.",
+                response=response,
+            )
 
         self._token = Token(
-            access_token=response["access_token"],
+            access_token=response_data["access_token"],
             refresh_token=self._token.refresh_token,
             device_code=self._token.device_code,
         )
@@ -696,7 +712,7 @@ class AsyncSeedr(BaseClient):
             else:
                 await anyio.to_thread.run_sync(self._on_token_refresh, self._token)
 
-        return models.RefreshTokenResult.from_dict(response)
+        return models.RefreshTokenResult.from_dict(response_data)
 
     async def _read_torrent_file_async(self, torrent_file: str) -> Dict[str, Any]:
         """Asynchronously reads a torrent file from a local path or a remote URL into memory."""
@@ -753,17 +769,10 @@ class AsyncSeedr(BaseClient):
         method: str,
         url: str,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
-        """Performs the raw HTTP request and handles low-level network or HTTP status errors."""
+    ) -> httpx.Response:
+        """Performs the raw HTTP request and handles low-level network errors."""
         try:
-            response = await client.request(method, url, **kwargs)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            if 500 <= e.response.status_code < 600:
-                message = f"Server error: {e.response.status_code} {e.response.reason_phrase}"
-                raise ServerError(message, response=e.response) from e
-            raise APIError(f"API error: {e.response.status_code}", response=e.response) from e
+            return await client.request(method, url, **kwargs)
         except httpx.RequestError as e:
             raise NetworkError(str(e)) from e
 
