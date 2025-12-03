@@ -85,9 +85,15 @@ class Seedr(BaseClient):
         """
         params = {"client_id": _constants.DEVICE_CLIENT_ID}
         with httpx.Client() as client:
-            response = client.get(_constants.DEVICE_CODE_URL, params=params)
-            response.raise_for_status()
-            response_data = response.json()
+            response = Seedr._make_http_request(client, "get", _constants.DEVICE_CODE_URL, params=params)
+
+            if not response.is_success:
+                raise APIError("Failed to get device code.", response=response)
+
+            try:
+                response_data = response.json()
+            except json.JSONDecodeError as e:
+                raise APIError("Invalid JSON response from API.", response=None) from e
         return models.DeviceCode.from_dict(response_data)
 
     @classmethod
@@ -664,20 +670,15 @@ class Seedr(BaseClient):
             try:
                 data = response.json()
             except json.JSONDecodeError as e:
-                raise APIError("Invalid JSON response from API.") from e
-
-        if response.is_server_error:
-            message = f"Server error: {response.status_code} {response.reason_phrase}"
-            raise ServerError(message, response=response)
+                raise APIError("Invalid JSON response from API.", response=None) from e
 
         if response.is_client_error:
-            error = data.get("error", f"API error: {response.status_code}")
             if response.status_code == 401:
-                raise AuthenticationError(error, response=response)
-            raise APIError(error, response=response)
+                raise AuthenticationError("Authentication failed.", response=response)
+            raise APIError("API request failed.", response=response)
 
         if isinstance(data, dict) and data.get("result", True) is not True:
-            raise APIError(data.get("error", "Unknown API error"), response=response)
+            raise APIError("API operation failed.", response=response)
 
         return data
 
@@ -693,9 +694,13 @@ class Seedr(BaseClient):
             raise AuthenticationError("No refresh token or device code available to refresh the session.")
 
         if not response.is_success:
-            raise AuthenticationError("Failed to refresh token", response=response)
+            raise AuthenticationError("Failed to refresh token.", response=response)
 
-        response_data = response.json()
+        try:
+            response_data = response.json()
+        except json.JSONDecodeError as e:
+            raise APIError("Invalid JSON response from API.", response=None) from e
+
         if "access_token" not in response_data:
             raise AuthenticationError(
                 "Token refresh failed. The response did not contain a new access token.",
@@ -768,15 +773,14 @@ class Seedr(BaseClient):
     ) -> Dict[str, Any]:
         """Handles the common logic for making an authentication request."""
         response = cls._make_http_request(client, method, url, **httpx_kwargs)
-        if response.is_server_error:
-            message = f"Server error: {response.status_code} {response.reason_phrase}"
-            raise ServerError(message, response=response)
+
         if not response.is_success:
             raise AuthenticationError("Authentication failed.", response=response)
+
         try:
             return response.json()
         except json.JSONDecodeError as e:
-            raise APIError("Invalid JSON response API.", response=None) from e
+            raise APIError("Invalid JSON response from API.", response=None) from e
 
     @staticmethod
     def _make_http_request(
@@ -785,9 +789,14 @@ class Seedr(BaseClient):
         url: str,
         **kwargs: Any,
     ) -> httpx.Response:
-        """Performs the raw HTTP request and handles low-level network errors."""
+        """Performs the raw HTTP request, handles network/server errors, and returns the response."""
         try:
-            return client.request(method, url, **kwargs)
+            response = client.request(method, url, **kwargs)
+
+            if response.is_server_error:
+                raise ServerError(response=response)
+
+            return response
         except httpx.RequestError as e:
             raise NetworkError(str(e)) from e
 
