@@ -18,8 +18,9 @@ class APIError(SeedrError):
         error_type (Optional[str]): The type of error from the API response body (e.g., 'parsing_error').
     """
 
-    def __init__(self, message: str, response: Optional[httpx.Response] = None) -> None:
-        super().__init__(message)
+    def __init__(
+        self, default_message: str = "An API error occurred.", response: Optional[httpx.Response] = None
+    ) -> None:
         self.response = response
         self.code: Optional[int] = None
         self.error_type: Optional[str] = None
@@ -30,19 +31,24 @@ class APIError(SeedrError):
                 if isinstance(data, dict):
                     self.code = data.get("code")
                     self.error_type = data.get("result")
-            except (json.JSONDecodeError, KeyError):
-                # Not a valid JSON API error, or keys are missing.
-                # We just have the raw response.
+
+            except json.JSONDecodeError:
                 pass
+
+        super().__init__(default_message)
 
 
 class ServerError(SeedrError):
     """Raised for 5xx server-side errors."""
 
-    def __init__(self, message: str = "A server error occurred.", response: Optional[httpx.Response] = None) -> None:
+    def __init__(
+        self, default_message: str = "A server error occurred.", response: Optional[httpx.Response] = None
+    ) -> None:
         self.response = response
         if response:
             message = f"{response.status_code} {response.reason_phrase}"
+        else:
+            message = default_message
         super().__init__(message)
 
 
@@ -55,9 +61,12 @@ class AuthenticationError(SeedrError):
         error_type (Optional[str]): The error type from the API response body (e.g., 'invalid_grant').
     """
 
-    def __init__(self, message: str, response: Optional[httpx.Response] = None) -> None:
+    def __init__(
+        self, default_message: str = "An authentication error occurred.", response: Optional[httpx.Response] = None
+    ) -> None:
         self.response = response
         self.error_type: Optional[str] = None
+        message = default_message
 
         # Attempt to parse a more specific error message from the response
         if response:
@@ -68,8 +77,7 @@ class AuthenticationError(SeedrError):
                     if "error_description" in data:
                         message = data["error_description"]
                     self.error_type = data.get("error")
-            except (json.JSONDecodeError, KeyError):
-                # Not a valid JSON API error, just use the initial message.
+            except json.JSONDecodeError:
                 pass
 
         super().__init__(message)
