@@ -1,8 +1,8 @@
 import inspect
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
-import json
 import anyio
 import httpx
+import json
 
 from . import _constants, _utils, models
 from ._base import BaseClient
@@ -133,10 +133,12 @@ class AsyncSeedr(BaseClient):
         async def auth_callable(client: httpx.AsyncClient) -> Dict[str, Any]:
             """Prepare and execute the authentication request."""
             data = _utils.prepare_password_payload(username, password)
-            try:
-                return await cls._make_http_request(client, "post", _constants.TOKEN_URL, data=data)
-            except APIError as e:
-                raise AuthenticationError("Authentication failed", response=e.response) from e
+            return await cls._authenticate_and_get_token_data(
+                client,
+                "post",
+                _constants.TOKEN_URL,
+                data=data,
+            )
 
         return await cls._initialize_client(
             auth_callable,
@@ -186,10 +188,12 @@ class AsyncSeedr(BaseClient):
         async def auth_callable(client: httpx.AsyncClient) -> Dict[str, Any]:
             """Prepare and execute the device authorization request."""
             params = _utils.prepare_device_code_params(device_code)
-            try:
-                return await cls._make_http_request(client, "get", _constants.DEVICE_AUTHORIZE_URL, params=params)
-            except APIError as e:
-                raise AuthenticationError("Failed to authorize device", response=e.response) from e
+            return await cls._authenticate_and_get_token_data(
+                client,
+                "get",
+                _constants.DEVICE_AUTHORIZE_URL,
+                params=params,
+            )
 
         return await cls._initialize_client(
             auth_callable,
@@ -236,10 +240,12 @@ class AsyncSeedr(BaseClient):
         async def auth_callable(client: httpx.AsyncClient) -> Dict[str, Any]:
             """Prepare and execute the token refresh request."""
             data = _utils.prepare_refresh_token_payload(refresh_token)
-            try:
-                return await cls._make_http_request(client, "post", _constants.TOKEN_URL, data=data)
-            except APIError as e:
-                raise AuthenticationError("Failed to refresh token", response=e.response) from e
+            return await cls._authenticate_and_get_token_data(
+                client,
+                "post",
+                _constants.TOKEN_URL,
+                data=data,
+            )
 
         return await cls._initialize_client(
             auth_callable,
@@ -251,7 +257,6 @@ class AsyncSeedr(BaseClient):
             **httpx_kwargs,
         )
 
-    # Public Instance Methods (Core API Logic)
     async def refresh_token(self) -> models.RefreshTokenResult:
         """
         Manually refreshes the access token.
@@ -656,7 +661,7 @@ class AsyncSeedr(BaseClient):
         try:
             data = response.json()
         except json.JSONDecodeError as e:
-            raise APIError("Invalid JSON response from API") from e
+            raise APIError("Invalid JSON response from API.", response=None) from e
 
         if isinstance(data, dict) and data.get("error") == "expired_token":
             await self._refresh_access_token()
@@ -667,7 +672,7 @@ class AsyncSeedr(BaseClient):
             try:
                 data = response.json()
             except json.JSONDecodeError as e:
-                raise APIError("Invalid JSON response from API after token refresh") from e
+                raise APIError("Invalid JSON response from API.") from e
 
         if response.is_server_error:
             message = f"Server error: {response.status_code} {response.reason_phrase}"
@@ -768,6 +773,29 @@ class AsyncSeedr(BaseClient):
         finally:
             if httpx_client is None and not success:
                 await client.aclose()
+
+    @classmethod
+    async def _authenticate_and_get_token_data(
+        cls: Type["AsyncSeedr"],
+        client: httpx.AsyncClient,
+        method: str,
+        url: str,
+        **httpx_kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Handles the common logic for making an asynchronous authentication request."""
+        response = await cls._make_http_request(client, method, url, **httpx_kwargs)
+
+        if response.is_server_error:
+            message = f"Server error: {response.status_code} {response.reason_phrase}"
+            raise ServerError(message, response=response)
+
+        if not response.is_success:
+            raise AuthenticationError("Authentication failed.", response=response)
+
+        try:
+            return response.json()
+        except json.JSONDecodeError as e:
+            raise APIError("Invalid JSON response from API.", response=None) from e
 
     @staticmethod
     async def _make_http_request(
