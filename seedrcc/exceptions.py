@@ -39,9 +39,11 @@ class APIError(SeedrError):
 class ServerError(SeedrError):
     """Raised for 5xx server-side errors."""
 
-    def __init__(self, message: str, response: Optional[httpx.Response] = None) -> None:
-        super().__init__(message)
+    def __init__(self, message: str = "A server error occurred.", response: Optional[httpx.Response] = None) -> None:
         self.response = response
+        if response:
+            message = f"{response.status_code} {response.reason_phrase}"
+        super().__init__(message)
 
 
 class AuthenticationError(SeedrError):
