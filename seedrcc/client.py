@@ -778,7 +778,13 @@ class Seedr(BaseClient):
             raise AuthenticationError("Authentication failed.", response=response)
 
         try:
-            return response.json()
+            data = response.json()
+            if isinstance(data, dict) and data.get("error") in ["authorization_pending"]:
+                raise AuthenticationError(
+                    "Authentication failed.",
+                    response=response,
+                )
+            return data
         except json.JSONDecodeError as e:
             raise APIError("Invalid JSON response from API.", response=None) from e
 
