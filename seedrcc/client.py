@@ -1,9 +1,9 @@
 import json
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Literal, Optional, Type
 
 import httpx
 
-from . import _constants, _utils, models
+from . import _constants, _request_models, models
 from ._base import BaseClient
 from .exceptions import APIError, AuthenticationError, NetworkError, ServerError
 from .token import Token
@@ -83,9 +83,9 @@ class Seedr(BaseClient):
             print(f"Go to {codes.verification_url} and enter {codes.user_code}")
             ```
         """
-        params = {"client_id": _constants.DEVICE_CLIENT_ID}
+        params = _request_models.GetDeviceCodeParams()
         with httpx.Client() as client:
-            response = Seedr._make_http_request(client, "get", _constants.DEVICE_CODE_URL, params=params)
+            response = Seedr._make_http_request(client, "get", _constants.DEVICE_CODE_URL, params=params.to_dict())
 
             if not response.is_success:
                 raise APIError("Failed to get device code.", response=response)
@@ -94,7 +94,7 @@ class Seedr(BaseClient):
                 response_data = response.json()
             except json.JSONDecodeError as e:
                 raise APIError("Invalid JSON response from API.", response=None) from e
-        return models.DeviceCode.from_dict(response_data)
+            return models.DeviceCode.from_dict(response_data)
 
     @classmethod
     def from_password(
@@ -132,12 +132,12 @@ class Seedr(BaseClient):
 
         def auth_callable(client: httpx.Client) -> Dict[str, Any]:
             """Prepare and execute the authentication request."""
-            data = _utils.prepare_password_payload(username, password)
+            payload = _request_models.PasswordLoginPayload(username=username, password=password)
             return cls._authenticate_and_get_token_data(
                 client,
                 "post",
                 _constants.TOKEN_URL,
-                data=data,
+                data=payload.to_dict(),
             )
 
         return cls._initialize_client(
@@ -187,12 +187,12 @@ class Seedr(BaseClient):
 
         def auth_callable(client: httpx.Client) -> Dict[str, Any]:
             """Prepare and execute the device authorization request."""
-            params = _utils.prepare_device_code_params(device_code)
+            params = _request_models.DeviceCodeAuthParams(device_code=device_code)
             return cls._authenticate_and_get_token_data(
                 client,
                 "get",
                 _constants.DEVICE_AUTHORIZE_URL,
-                params=params,
+                params=params.to_dict(),
             )
 
         return cls._initialize_client(
@@ -239,12 +239,12 @@ class Seedr(BaseClient):
 
         def auth_callable(client: httpx.Client) -> Dict[str, Any]:
             """Prepare and execute the token refresh request."""
-            data = _utils.prepare_refresh_token_payload(refresh_token)
+            payload = _request_models.RefreshTokenPayload(refresh_token=refresh_token)
             return cls._authenticate_and_get_token_data(
                 client,
                 "post",
                 _constants.TOKEN_URL,
-                data=data,
+                data=payload.to_dict(),
             )
 
         return cls._initialize_client(
@@ -326,8 +326,8 @@ class Seedr(BaseClient):
             print(response)
             ```
         """
-        data = _utils.prepare_list_contents_payload(folder_id)
-        response_data = self._api_request("post", "list_contents", data=data)
+        payload = _request_models.ListContentsPayload(content_id=folder_id)
+        response_data = self._api_request("post", "list_contents", data=payload.to_dict())
         return models.ListContentsResult.from_dict(response_data)
 
     def add_torrent(
@@ -360,12 +360,16 @@ class Seedr(BaseClient):
             print(result.title)
             ```
         """
-        data = _utils.prepare_add_torrent_payload(magnet_link, wishlist_id, folder_id)
+        payload = _request_models.AddTorrentPayload(
+            torrent_magnet=magnet_link,
+            wishlist_id=wishlist_id,
+            folder_id=folder_id,
+        )
         files = {}
         if torrent_file:
             files = self._read_torrent_file(torrent_file)
 
-        response_data = self._api_request("post", "add_torrent", data=data, files=files)
+        response_data = self._api_request("post", "add_torrent", data=payload.to_dict(), files=files)
         return models.AddTorrentResult.from_dict(response_data)
 
     def scan_page(self, url: str) -> models.ScanPageResult:
@@ -385,8 +389,8 @@ class Seedr(BaseClient):
                 print(torrent.title)
             ```
         """
-        data = _utils.prepare_scan_page_payload(url)
-        response_data = self._api_request("post", "scan_page", data=data)
+        payload = _request_models.ScanPagePayload(url=url)
+        response_data = self._api_request("post", "scan_page", data=payload.to_dict())
         return models.ScanPageResult.from_dict(response_data)
 
     def fetch_file(self, file_id: str) -> models.FetchFileResult:
@@ -405,8 +409,8 @@ class Seedr(BaseClient):
             print(f"Download URL: {result.url}")
             ```
         """
-        data = _utils.prepare_fetch_file_payload(file_id)
-        response_data = self._api_request("post", "fetch_file", data=data)
+        payload = _request_models.FetchFilePayload(folder_file_id=file_id)
+        response_data = self._api_request("post", "fetch_file", data=payload.to_dict())
         return models.FetchFileResult.from_dict(response_data)
 
     def create_archive(self, folder_id: str) -> models.CreateArchiveResult:
@@ -425,8 +429,8 @@ class Seedr(BaseClient):
             print(f"Archive URL: {result.archive_url}")
             ```
         """
-        data = _utils.prepare_create_archive_payload(folder_id)
-        response_data = self._api_request("post", "create_empty_archive", data=data)
+        payload = _request_models.CreateArchivePayload(folder_id=folder_id)
+        response_data = self._api_request("post", "create_empty_archive", data=payload.to_dict())
         return models.CreateArchiveResult.from_dict(response_data)
 
     def search_files(self, query: str) -> models.Folder:
@@ -446,8 +450,8 @@ class Seedr(BaseClient):
                 print(f"Found folder: {f.name}")
             ```
         """
-        data = _utils.prepare_search_files_payload(query)
-        response_data = self._api_request("post", "search_files", data=data)
+        payload = _request_models.SearchFilesPayload(search_query=query)
+        response_data = self._api_request("post", "search_files", data=payload.to_dict())
         return models.Folder.from_dict(response_data)
 
     def add_folder(self, name: str) -> models.APIResult:
@@ -467,8 +471,8 @@ class Seedr(BaseClient):
                 print("Folder created successfully.")
             ```
         """
-        data = _utils.prepare_add_folder_payload(name)
-        response_data = self._api_request("post", "add_folder", data=data)
+        payload = _request_models.AddFolderPayload(name=name)
+        response_data = self._api_request("post", "add_folder", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     def rename_file(self, file_id: str, rename_to: str) -> models.APIResult:
@@ -489,8 +493,8 @@ class Seedr(BaseClient):
                 print("File renamed successfully.")
             ```
         """
-        data = _utils.prepare_rename_payload(rename_to, file_id=file_id)
-        response_data = self._api_request("post", "rename", data=data)
+        payload = _request_models.RenameFilePayload(rename_to=rename_to, file_id=file_id)
+        response_data = self._api_request("post", "rename", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     def rename_folder(self, folder_id: str, rename_to: str) -> models.APIResult:
@@ -511,8 +515,8 @@ class Seedr(BaseClient):
                 print("Folder renamed successfully.")
             ```
         """
-        data = _utils.prepare_rename_payload(rename_to, folder_id=folder_id)
-        response_data = self._api_request("post", "rename", data=data)
+        payload = _request_models.RenameFolderPayload(rename_to=rename_to, folder_id=folder_id)
+        response_data = self._api_request("post", "rename", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     def delete_file(self, file_id: str) -> models.APIResult:
@@ -584,8 +588,8 @@ class Seedr(BaseClient):
             result = client.delete_wishlist(wishlist_id='12345')
             ```
         """
-        data = _utils.prepare_remove_wishlist_payload(wishlist_id)
-        response_data = self._api_request("post", "remove_wishlist", data=data)
+        payload = _request_models.RemoveWishlistPayload(id=wishlist_id)
+        response_data = self._api_request("post", "remove_wishlist", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     def get_devices(self) -> List[models.Device]:
@@ -622,8 +626,8 @@ class Seedr(BaseClient):
             result = client.change_name(name='New Name', password='password')
             ```
         """
-        data = _utils.prepare_change_name_payload(name, password)
-        response_data = self._api_request("post", "user_account_modify", data=data)
+        payload = _request_models.ChangeNamePayload(fullname=name, password=password)
+        response_data = self._api_request("post", "user_account_modify", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     def change_password(self, old_password: str, new_password: str) -> models.APIResult:
@@ -642,8 +646,12 @@ class Seedr(BaseClient):
             result = client.change_password(old_password='old', new_password='new')
             ```
         """
-        data = _utils.prepare_change_password_payload(old_password, new_password)
-        response_data = self._api_request("post", "user_account_modify", data=data)
+        payload = _request_models.ChangePasswordPayload(
+            password=old_password,
+            new_password=new_password,
+            new_password_repeat=new_password,
+        )
+        response_data = self._api_request("post", "user_account_modify", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     def _api_request(
@@ -685,11 +693,13 @@ class Seedr(BaseClient):
     def _refresh_access_token(self) -> models.RefreshTokenResult:
         """Refreshes the access token using the refresh token or device code."""
         if self._token.refresh_token:
-            payload = _utils.prepare_refresh_token_payload(self._token.refresh_token)
-            response = self._make_http_request(self._client, "post", _constants.TOKEN_URL, data=payload)
+            payload = _request_models.RefreshTokenPayload(refresh_token=self._token.refresh_token)
+            response = self._make_http_request(self._client, "post", _constants.TOKEN_URL, data=payload.to_dict())
         elif self._token.device_code:
-            params = _utils.prepare_device_code_params(self._token.device_code)
-            response = self._make_http_request(self._client, "get", _constants.DEVICE_AUTHORIZE_URL, params=params)
+            params = _request_models.DeviceCodeAuthParams(device_code=self._token.device_code)
+            response = self._make_http_request(
+                self._client, "get", _constants.DEVICE_AUTHORIZE_URL, params=params.to_dict()
+            )
         else:
             raise AuthenticationError("No refresh token or device code available to refresh the session.")
 
@@ -726,10 +736,10 @@ class Seedr(BaseClient):
             with open(torrent_file, "rb") as f:
                 return {"torrent_file": f.read()}
 
-    def _delete_api_item(self, item_type: str, item_id: str) -> models.APIResult:
+    def _delete_api_item(self, item_type: Literal["file", "folder", "torrent"], item_id: str) -> models.APIResult:
         """Constructs and sends a request to delete a specific item (file, folder, etc.)."""
-        data = _utils.prepare_delete_item_payload(item_type, item_id)
-        response_data = self._api_request("post", "delete", data=data)
+        payload = _request_models.DeleteItemPayload(item_type=item_type, item_id=item_id)
+        response_data = self._api_request("post", "delete", data=payload.to_dict())
         return models.APIResult.from_dict(response_data)
 
     @classmethod
