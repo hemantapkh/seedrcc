@@ -610,6 +610,33 @@ class Seedr(BaseClient):
         devices_data = response_data.get("devices", [])
         return [models.Device.from_dict(d) for d in devices_data]
 
+    def get_torrent_progress(self, progress_url: str) -> models.TorrentProgress:
+        """
+        Fetch and parse the progress data for an active torrent download.
+
+        Args:
+            progress_url (str): The progress URL from a `Torrent` object's `progress_url` field.
+
+        Returns:
+            A `TorrentProgress` object containing download stats.
+
+        Example:
+            ```python
+            contents = client.list_contents()
+            for torrent in contents.torrents:
+                if torrent.progress_url:
+                    progress = client.get_torrent_progress(torrent.progress_url)
+                    print(f"{progress.title}: {progress.progress:.1f}%")
+            ```
+        """
+        url = httpx.URL(progress_url).copy_remove_param("callback")
+        response = self._make_http_request(self._client, "get", str(url))
+        try:
+            data = response.json()
+        except json.JSONDecodeError as e:
+            raise APIError("Invalid JSON response from progress URL.", response=response) from e
+        return models.TorrentProgress.from_dict(data)
+
     def change_name(self, name: str, password: str) -> models.APIResult:
         """
         Change the name of the account.

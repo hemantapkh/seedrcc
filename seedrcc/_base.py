@@ -124,6 +124,11 @@ class BaseClient(ABC):
         pass
 
     @abstractmethod
+    def get_torrent_progress(self, progress_url: str) -> "models.TorrentProgress":
+        """Fetch and parse the progress data for an active torrent download."""
+        pass
+
+    @abstractmethod
     def change_name(self, name: str, password: str) -> "models.APIResult":
         """Change the name of the account."""
         pass
