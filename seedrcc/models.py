@@ -404,7 +404,7 @@ class TorrentProgressStats(_BaseModel):
     warnings: str = ""
     stopped: int = 0
     folder_created: int = 0
-    download_rate: int = 0
+    download_rate: float = 0.0
     size: int = 0
     torrent_quality: Optional[int] = None
     seeders: int = 0
@@ -421,8 +421,7 @@ class TorrentProgress(_BaseModel):
     progress: float
     hash: str
     stopped: int
-    download_rate: int
-    folder_created: int
+    download_rate: float
     stats: TorrentProgressStats
     torrent_quality: Optional[int] = None
     warnings: str = ""
@@ -437,7 +436,6 @@ class TorrentProgress(_BaseModel):
             hash=data.get("hash", ""),
             stopped=data.get("stopped", 0),
             download_rate=data.get("download_rate", 0),
-            folder_created=data.get("folder_created", 0),
             stats=TorrentProgressStats.from_dict(data.get("stats", {})),
             torrent_quality=data.get("torrent_quality"),
             warnings=data.get("warnings", ""),
