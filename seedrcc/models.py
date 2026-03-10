@@ -22,6 +22,8 @@ __all__ = [
     "RefreshTokenResult",
     "ScannedTorrent",
     "ScanPageResult",
+    "TorrentProgressStats",
+    "TorrentProgress",
 ]
 
 
@@ -388,3 +390,56 @@ class APIResult(_BaseModel):
 
     result: bool
     code: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class TorrentProgressStats(_BaseModel):
+    """Represents the nested 'stats' object in a torrent progress response."""
+
+    torrent_hash: str = ""
+    progress: float = 0.0
+    title: str = ""
+    downloading_from: int = 0
+    uploading_to: int = 0
+    warnings: str = ""
+    stopped: int = 0
+    folder_created: int = 0
+    download_rate: float = 0.0
+    size: int = 0
+    torrent_quality: Optional[int] = None
+    seeders: int = 0
+    leechers: int = 0
+    seed_ratio: float = 0.0
+
+
+@dataclass(frozen=True)
+class TorrentProgress(_BaseModel):
+    """Represents the progress data for an active torrent download."""
+
+    title: str
+    size: int
+    progress: float
+    hash: str
+    stopped: int
+    download_rate: float
+    stats: TorrentProgressStats
+    torrent_quality: Optional[int] = None
+    warnings: str = ""
+    files_progress: List[Any] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TorrentProgress":
+        instance = cls(
+            title=data.get("title", ""),
+            size=data.get("size", 0),
+            progress=data.get("progress", 0.0),
+            hash=data.get("hash", ""),
+            stopped=data.get("stopped", 0),
+            download_rate=data.get("download_rate", 0),
+            stats=TorrentProgressStats.from_dict(data.get("stats", {})),
+            torrent_quality=data.get("torrent_quality"),
+            warnings=data.get("warnings", ""),
+            files_progress=data.get("files_progress", []),
+        )
+        object.__setattr__(instance, "_raw", data)
+        return instance
