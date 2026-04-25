@@ -1,6 +1,6 @@
 [project]
 name = "seedrcc"
-version = "2.1.0"
+version = "2.1.1"
 authors = [{ name = "Hemanta Pokharel", email = "yo@hemantapkh.com" }]
 description = "A comprehensive Python API wrapper for seedr.cc"
 readme = "README.md"
