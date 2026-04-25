@@ -201,7 +201,7 @@ class AccountInfo(_BaseModel):
     wishlist: list
     invites: int
     invites_accepted: int
-    max_invites: int
+    max_invites: int = 0
 
 
 @dataclass(frozen=True)
