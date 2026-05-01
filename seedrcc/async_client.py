@@ -344,7 +344,7 @@ class AsyncSeedr(BaseClient):
         magnet_link: Optional[str] = None,
         torrent_file: Optional[str] = None,
         wishlist_id: Optional[str] = None,
-        folder_id: str = "-1",
+        folder_id: str = "0",
     ) -> models.AddTorrentResult:
         """
         Add a torrent to the seedr account for downloading.
